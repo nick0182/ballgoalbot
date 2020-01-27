@@ -35,7 +35,7 @@ public class BallGoalBot extends TelegramLongPollingBot {
 
     public static final String TIME_TO_BE_DEFINED = "Time to be defined";
 
-    private static final int ZENIT_API_ID = 33;
+    private static final int ZENIT_API_ID = 596;
 
     private static final String API_HOST = "api-football-v1.p.rapidapi.com";
 
