@@ -1,13 +1,13 @@
 package com.aws.codestar.projecttemplates.configuration;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-
+import bot.BallGoalBot;
 import com.aws.codestar.projecttemplates.controller.HelloWorldController;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.*;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import main.Application;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
 /**
  * Spring configuration for sample application.
@@ -34,6 +34,24 @@ public class ApplicationConfig {
     @Bean
     public static PropertySourcesPlaceholderConfigurer placeHolderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
+    }
+
+    @Bean
+    public Application initTelegramAPI() {
+        return new Application();
+    }
+
+    @Bean
+    @DependsOn(value = "initTelegramAPI")
+    public TelegramBotsApi registerBot() throws TelegramApiRequestException {
+        TelegramBotsApi telegramBotsApi = new TelegramBotsApi();
+        telegramBotsApi.registerBot(ballGoalBot());
+        return telegramBotsApi;
+    }
+
+    @Bean
+    public BallGoalBot ballGoalBot() {
+        return new BallGoalBot();
     }
 
 }
