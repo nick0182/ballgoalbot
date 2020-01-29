@@ -21,45 +21,53 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Objects;
 
+import static constants.Emojis.*;
+
 public class BallGoalBot extends TelegramLongPollingBot {
 
-    private static final String TIMEZONE_MOSCOW_API = "Europe/Moscow";
+    private String messageTimeToBeDefined;
 
-    private static final String TIMEZONE_JERUSALEM_API = "Asia/Jerusalem";
+    private String apiTimezoneMoscow;
 
-    public static final String TIME_TO_BE_DEFINED = "Time to be defined";
+    private String apiTimezoneJerusalem;
 
-    private static final int ZENIT_API_ID = 596;
+    private String apiZenitId;
 
-    private static final String API_HOST = "api-football-v1.p.rapidapi.com";
+    private String apiHost;
 
-    private static final String API_KEY = "1cccd3131bmshed7ddf66e006ec5p168f9fjsn3ab66e62ad85";
+    private String apiKey;
 
-    private static final String BOT_NAME = "ballgoalbot";
+    private String telegramBotName;
 
-    private static final String BOT_TOKEN = "929924919:AAGhxkyh6SEG21m7PGG9JmM81y9onmNncFE";
-
-    private static final String EMOJI_HOME_TEAM =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x8F, (byte) 0xA0}, StandardCharsets.UTF_8);
-
-    private static final String EMOJI_AWAY_TEAM =
-            new String(new byte[]{(byte) 0xE2, (byte) 0x9C, (byte) 0x88}, StandardCharsets.UTF_8);
-
-    private static final String EMOJI_DATE =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x93, (byte) 0x85}, StandardCharsets.UTF_8);
-
-    private static final String EMOJI_TIME =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x95, (byte) 0xA3}, StandardCharsets.UTF_8);
+    private String telegramBotToken;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE d MMMM u");
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    public BallGoalBot(
+            String messageTimeToBeDefined,
+            String apiTimezoneMoscow,
+            String apiTimezoneJerusalem,
+            String apiZenitId,
+            String apiHost,
+            String apiKey,
+            String telegramBotName,
+            String telegramBotToken) {
+        this.messageTimeToBeDefined = messageTimeToBeDefined;
+        this.apiTimezoneMoscow = apiTimezoneMoscow;
+        this.apiTimezoneJerusalem = apiTimezoneJerusalem;
+        this.apiZenitId = apiZenitId;
+        this.apiHost = apiHost;
+        this.apiKey = apiKey;
+        this.telegramBotName = telegramBotName;
+        this.telegramBotToken = telegramBotToken;
+    }
 
     public void onUpdateReceived(Update update) {
         String command = update.getMessage().getText();
@@ -75,13 +83,13 @@ public class BallGoalBot extends TelegramLongPollingBot {
                     break;
                 case Command.TIMEZONE_JERUSALEM:
                     sendMessage = new SendMessage();
-                    setupMessage(sendMessage, TIMEZONE_JERUSALEM_API);
+                    setupMessage(sendMessage, apiTimezoneJerusalem);
                     sendMessage.setChatId(update.getMessage().getChatId());
                     execute(sendMessage);
                     break;
                 case Command.TIMEZONE_SAINT_PETERSBURG:
                     sendMessage = new SendMessage();
-                    setupMessage(sendMessage, TIMEZONE_MOSCOW_API);
+                    setupMessage(sendMessage, apiTimezoneMoscow);
                     sendMessage.setChatId(update.getMessage().getChatId());
                     execute(sendMessage);
                     break;
@@ -122,13 +130,13 @@ public class BallGoalBot extends TelegramLongPollingBot {
 
     private String makeApiCall(String timezone) throws IOException {
         OkHttpClient okHttpClient = new OkHttpClient();
-        String resource = "/v2/fixtures/team/" + ZENIT_API_ID + "/next/1?timezone=" + timezone;
-        URL url = new URL("https", API_HOST, resource);
+        String resource = "/v2/fixtures/team/" + apiZenitId + "/next/1?timezone=" + timezone;
+        URL url = new URL("https", apiHost, resource);
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader("x-rapidapi-host", API_HOST)
-                .addHeader("x-rapidapi-key", API_KEY)
+                .addHeader("x-rapidapi-host", apiHost)
+                .addHeader("x-rapidapi-key", apiKey)
                 .build();
 
         Response response = okHttpClient.newCall(request).execute();
@@ -146,18 +154,18 @@ public class BallGoalBot extends TelegramLongPollingBot {
     }
 
     private String getTimeString(ZonedDateTime date, String status) {
-        if (status.equals(TIME_TO_BE_DEFINED)) {
-            return TIME_TO_BE_DEFINED;
+        if (status.equals(messageTimeToBeDefined)) {
+            return messageTimeToBeDefined;
         } else {
             return date.toLocalTime().format(TIME_FORMATTER);
         }
     }
 
     public String getBotUsername() {
-        return BOT_NAME;
+        return telegramBotName;
     }
 
     public String getBotToken() {
-        return BOT_TOKEN;
+        return telegramBotToken;
     }
 }
