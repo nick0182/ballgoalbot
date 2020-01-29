@@ -6,22 +6,15 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import main.Application;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
-/**
- * Spring configuration for sample application.
- */
 @Configuration
 @ComponentScan({ "com.aws.codestar.projecttemplates.configuration" })
 @PropertySource("classpath:application.properties")
 public class ApplicationConfig {
 
-    /**
-     * Retrieved from properties file.
-     */
     @Value("${HelloWorld.SiteName}")
     private String siteName;
 
@@ -54,9 +47,6 @@ public class ApplicationConfig {
         return new HelloWorldController(this.siteName);
     }
 
-    /**
-     * Required to inject properties using the 'Value' annotation.
-     */
     @Bean
     public static PropertySourcesPlaceholderConfigurer placeHolderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();

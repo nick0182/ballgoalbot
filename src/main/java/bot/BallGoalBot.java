@@ -11,6 +11,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -70,27 +71,22 @@ public class BallGoalBot extends TelegramLongPollingBot {
     }
 
     public void onUpdateReceived(Update update) {
-        String command = update.getMessage().getText();
+        Message message = update.getMessage();
+        String command = message.getText();
+        long chatId = message.getChatId();
         SendMessage sendMessage;
         try {
             switch (command) {
                 case Command.ZENIT:
-                    sendMessage = new SendMessage();
-                    sendMessage.setText("Choose your timezone");
-                    sendMessage.setReplyMarkup(setupTimezoneKeyboard());
-                    sendMessage.setChatId(update.getMessage().getChatId());
+                    sendMessage = setupTimezoneMessage(chatId);
                     execute(sendMessage);
                     break;
                 case Command.TIMEZONE_JERUSALEM:
-                    sendMessage = new SendMessage();
-                    setupMessage(sendMessage, apiTimezoneJerusalem);
-                    sendMessage.setChatId(update.getMessage().getChatId());
+                    sendMessage = setupResultMessage(chatId, apiTimezoneJerusalem);
                     execute(sendMessage);
                     break;
                 case Command.TIMEZONE_SAINT_PETERSBURG:
-                    sendMessage = new SendMessage();
-                    setupMessage(sendMessage, apiTimezoneMoscow);
-                    sendMessage.setChatId(update.getMessage().getChatId());
+                    sendMessage = setupResultMessage(chatId, apiTimezoneMoscow);
                     execute(sendMessage);
                     break;
             }
@@ -100,7 +96,16 @@ public class BallGoalBot extends TelegramLongPollingBot {
 
     }
 
-    private void setupMessage(SendMessage sendMessage, String timezone) throws IOException {
+    private SendMessage setupTimezoneMessage(long chatId) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Choose your timezone");
+        sendMessage.setReplyMarkup(setupTimezoneKeyboard());
+        sendMessage.setChatId(chatId);
+        return sendMessage;
+    }
+
+    private SendMessage setupResultMessage(long chatId, String timezone) throws IOException {
+        SendMessage sendMessage = new SendMessage();
         String jsonString = makeApiCall(timezone);
         Result result = convertJson(jsonString);
         Fixture fixture = result.getApi().getFixtures().get(0);
@@ -112,6 +117,8 @@ public class BallGoalBot extends TelegramLongPollingBot {
         sendMessage.setText(EMOJI_HOME_TEAM + " " + homeTeam + "\n" + EMOJI_AWAY_TEAM + " " + awayTeam
                 + "\n" + EMOJI_DATE + " " + date + "\n" + EMOJI_TIME + " " + time);
         sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
+        sendMessage.setChatId(chatId);
+        return sendMessage;
     }
 
     private ReplyKeyboard setupTimezoneKeyboard() {
