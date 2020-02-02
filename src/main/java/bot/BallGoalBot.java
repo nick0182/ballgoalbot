@@ -1,7 +1,5 @@
 package bot;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.Command;
 import json.Fixture;
@@ -9,27 +7,24 @@ import json.Result;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.net.URL;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Objects;
 
 import static constants.Emojis.*;
 
-public class BallGoalBot extends TelegramLongPollingBot {
+public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private String messageTimeToBeDefined;
 
@@ -50,6 +45,8 @@ public class BallGoalBot extends TelegramLongPollingBot {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE d MMMM u");
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
 
     public BallGoalBot(
             String messageTimeToBeDefined,
@@ -73,6 +70,7 @@ public class BallGoalBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
         String command = message.getText();
+        LOG.info("Command received: {}", command);
         long chatId = message.getChatId();
         SendMessage sendMessage;
         try {
@@ -99,15 +97,15 @@ public class BallGoalBot extends TelegramLongPollingBot {
     private SendMessage setupTimezoneMessage(long chatId) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Choose your timezone");
-        sendMessage.setReplyMarkup(setupTimezoneKeyboard());
+        sendMessage.setReplyMarkup(getTimezoneKeyboardBean());
         sendMessage.setChatId(chatId);
         return sendMessage;
     }
 
     private SendMessage setupResultMessage(long chatId, String timezone) throws IOException {
         SendMessage sendMessage = new SendMessage();
-        String jsonString = makeApiCall(timezone);
-        Result result = convertJson(jsonString);
+        String json = makeApiCall(timezone);
+        Result result = getObjectMapperBean().readValue(json, Result.class);
         Fixture fixture = result.getApi().getFixtures().get(0);
         String homeTeam = fixture.getHomeTeam().getTeam_name();
         String awayTeam = fixture.getAwayTeam().getTeam_name();
@@ -116,23 +114,9 @@ public class BallGoalBot extends TelegramLongPollingBot {
         String time = getTimeString(eventDate, fixture.getStatus());
         sendMessage.setText(EMOJI_HOME_TEAM + " " + homeTeam + "\n" + EMOJI_AWAY_TEAM + " " + awayTeam
                 + "\n" + EMOJI_DATE + " " + date + "\n" + EMOJI_TIME + " " + time);
-        sendMessage.setReplyMarkup(new ReplyKeyboardRemove());
+        sendMessage.setReplyMarkup(getRemoveKeyboardBean());
         sendMessage.setChatId(chatId);
         return sendMessage;
-    }
-
-    private ReplyKeyboard setupTimezoneKeyboard() {
-        ReplyKeyboardMarkup timezoneKeyboard = new ReplyKeyboardMarkup();
-        timezoneKeyboard.setOneTimeKeyboard(true);
-        timezoneKeyboard.setSelective(true);
-        timezoneKeyboard.setResizeKeyboard(true);
-        KeyboardRow keyboardRow = new KeyboardRow();
-        KeyboardButton firstKeyboardButton = new KeyboardButton(Command.TIMEZONE_JERUSALEM);
-        KeyboardButton secondKeyboardButton = new KeyboardButton(Command.TIMEZONE_SAINT_PETERSBURG);
-        keyboardRow.add(firstKeyboardButton);
-        keyboardRow.add(secondKeyboardButton);
-        timezoneKeyboard.setKeyboard(Collections.singletonList(keyboardRow));
-        return timezoneKeyboard;
     }
 
     private String makeApiCall(String timezone) throws IOException {
@@ -148,12 +132,6 @@ public class BallGoalBot extends TelegramLongPollingBot {
 
         Response response = okHttpClient.newCall(request).execute();
         return Objects.requireNonNull(response.body()).string();
-    }
-
-    private Result convertJson(String jsonString) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper.readValue(jsonString, Result.class);
     }
 
     private String getDateString(ZonedDateTime date) {
@@ -175,4 +153,10 @@ public class BallGoalBot extends TelegramLongPollingBot {
     public String getBotToken() {
         return telegramBotToken;
     }
+
+    protected abstract ReplyKeyboard getTimezoneKeyboardBean();
+
+    protected abstract ReplyKeyboard getRemoveKeyboardBean();
+
+    protected abstract ObjectMapper getObjectMapperBean();
 }
