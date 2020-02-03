@@ -1,6 +1,6 @@
 package bot;
 
-import bot.executor.UpdateExecutor;
+import cache.CachedMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import constants.Command;
 import json.Fixture;
@@ -19,10 +19,14 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static constants.Emojis.*;
 
@@ -50,6 +54,12 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
 
+    private static final int THRESHOLD_MINUTES = 15;
+
+    private LocalTime lastAPITriggerTime;
+
+    private AtomicReference<CachedMessage> cachedMessageReference = new AtomicReference<>();
+
     public BallGoalBot(
             String messageTimeToBeDefined,
             String apiTimezoneMoscow,
@@ -67,6 +77,8 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         this.apiKey = apiKey;
         this.telegramBotName = telegramBotName;
         this.telegramBotToken = telegramBotToken;
+        lastAPITriggerTime = LocalTime.now(ZoneId.systemDefault()).minusMinutes(THRESHOLD_MINUTES);
+        cachedMessageReference.set(new CachedMessage("", "", "", ""));
     }
 
     public void onUpdateReceived(Update update) {
@@ -100,27 +112,57 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
     }
 
     private void executeResultMessage(long chatId, String timezone) {
-        ExecutorService executorService = getUpdateExecutorBean().getCachedExecutorService();
-        executorService.submit(() -> {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setReplyMarkup(getRemoveKeyboardBean());
+        sendMessage.setChatId(chatId);
+        LocalTime now = LocalTime.now(ZoneId.systemDefault());
+        int threshold = now.minusMinutes(THRESHOLD_MINUTES).compareTo(lastAPITriggerTime);
+
+        if (threshold > 0) {
+            lastAPITriggerTime = now;
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(() -> {
+                String resultText;
+                try {
+                    String json = makeApiCall(timezone);
+                    Result result = getObjectMapperBean().readValue(json, Result.class);
+                    Fixture fixture = result.getApi().getFixtures().get(0);
+                    String homeTeam = fixture.getHomeTeam().getTeam_name();
+                    String awayTeam = fixture.getAwayTeam().getTeam_name();
+                    ZonedDateTime event = fixture.getEventDate();
+                    String eventDate = getDateString(event);
+                    String eventTime = getTimeString(event, fixture.getStatus());
+                    cachedMessageReference.set(new CachedMessage(homeTeam, awayTeam, eventDate, eventTime));
+                    resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
+                    sendMessage.setText(resultText);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    sendMessage.setText("Server error. Please try again later");
+                }
+                try {
+                    execute(sendMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            });
+            executorService.shutdown();
+        } else {
+            CachedMessage cachedMessage = cachedMessageReference.get();
+            String resultText = createResultText(cachedMessage.getHomeTeam(), cachedMessage.getAwayTeam(),
+                    cachedMessage.getEventDate(), cachedMessage.getEventTime());
+            sendMessage.setText(resultText);
             try {
-                SendMessage sendMessage = new SendMessage();
-                String json = makeApiCall(timezone);
-                Result result = getObjectMapperBean().readValue(json, Result.class);
-                Fixture fixture = result.getApi().getFixtures().get(0);
-                String homeTeam = fixture.getHomeTeam().getTeam_name();
-                String awayTeam = fixture.getAwayTeam().getTeam_name();
-                ZonedDateTime eventDate = fixture.getEventDate();
-                String date = getDateString(eventDate);
-                String time = getTimeString(eventDate, fixture.getStatus());
-                sendMessage.setText(EMOJI_HOME_TEAM + " " + homeTeam + "\n" + EMOJI_AWAY_TEAM + " " + awayTeam
-                        + "\n" + EMOJI_DATE + " " + date + "\n" + EMOJI_TIME + " " + time);
-                sendMessage.setReplyMarkup(getRemoveKeyboardBean());
-                sendMessage.setChatId(chatId);
                 execute(sendMessage);
-            } catch (IOException | TelegramApiException ex) {
+            } catch (TelegramApiException ex) {
                 ex.printStackTrace();
             }
-        });
+        }
+
+    }
+
+    private String createResultText(String homeTeam, String awayTeam, String eventDate, String eventTime) {
+        return EMOJI_HOME_TEAM + " " + homeTeam + "\n" + EMOJI_AWAY_TEAM + " " + awayTeam
+                + "\n" + EMOJI_DATE + " " + eventDate + "\n" + EMOJI_TIME + " " + eventTime;
     }
 
     private String makeApiCall(String timezone) throws IOException {
@@ -164,5 +206,4 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     protected abstract ObjectMapper getObjectMapperBean();
 
-    protected abstract UpdateExecutor getUpdateExecutorBean();
 }

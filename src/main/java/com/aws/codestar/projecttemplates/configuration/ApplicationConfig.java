@@ -1,7 +1,6 @@
 package com.aws.codestar.projecttemplates.configuration;
 
 import bot.BallGoalBot;
-import bot.executor.UpdateExecutor;
 import com.aws.codestar.projecttemplates.controller.HelloWorldController;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,7 +21,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
 import java.util.Collections;
-import java.util.concurrent.Executors;
 
 @Configuration
 @ComponentScan({ "com.aws.codestar.projecttemplates.configuration" })
@@ -108,11 +106,6 @@ public class ApplicationConfig {
             protected ObjectMapper getObjectMapperBean() {
                 return objectMapper();
             }
-
-            @Override
-            protected UpdateExecutor getUpdateExecutorBean() {
-                return updateExecutor();
-            }
         };
     }
 
@@ -144,17 +137,6 @@ public class ApplicationConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper;
-    }
-
-    @Bean(destroyMethod = "shutdownExecutor")
-    @Lazy
-    public UpdateExecutor updateExecutor() {
-        return new UpdateExecutor(Executors.newCachedThreadPool()) {
-            @Override
-            protected void shutdownExecutor() {
-                cachedExecutorService.shutdown();
-            }
-        };
     }
 
 }
