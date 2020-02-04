@@ -1,28 +1,22 @@
 package cache;
 
+import java.time.ZonedDateTime;
+
 public class CachedMessage {
-
-    private String eventDate;
-
-    private String eventTime;
 
     private String homeTeam;
 
     private String awayTeam;
 
-    public CachedMessage(String homeTeam, String awayTeam, String eventDate, String eventTime) {
+    private ZonedDateTime eventDateTime;
+
+    private String status;
+
+    public CachedMessage(String homeTeam, String awayTeam, ZonedDateTime eventDateTime, String status) {
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
-        this.eventDate = eventDate;
-        this.eventTime = eventTime;
-    }
-
-    public String getEventDate() {
-        return eventDate;
-    }
-
-    public String getEventTime() {
-        return eventTime;
+        this.eventDateTime = eventDateTime;
+        this.status = status;
     }
 
     public String getHomeTeam() {
@@ -31,5 +25,13 @@ public class CachedMessage {
 
     public String getAwayTeam() {
         return awayTeam;
+    }
+
+    public ZonedDateTime getEventDateTime() {
+        return eventDateTime;
+    }
+
+    public String getStatus() {
+        return status;
     }
 }

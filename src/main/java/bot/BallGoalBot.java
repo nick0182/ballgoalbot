@@ -78,7 +78,6 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         this.telegramBotName = telegramBotName;
         this.telegramBotToken = telegramBotToken;
         lastAPITriggerTime = LocalTime.now(ZoneId.systemDefault()).minusMinutes(THRESHOLD_MINUTES);
-        cachedMessageReference.set(new CachedMessage("", "", "", ""));
     }
 
     public void onUpdateReceived(Update update) {
@@ -129,10 +128,11 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                     Fixture fixture = result.getApi().getFixtures().get(0);
                     String homeTeam = fixture.getHomeTeam().getTeam_name();
                     String awayTeam = fixture.getAwayTeam().getTeam_name();
-                    ZonedDateTime event = fixture.getEventDate();
-                    String eventDate = getDateString(event);
-                    String eventTime = getTimeString(event, fixture.getStatus());
-                    cachedMessageReference.set(new CachedMessage(homeTeam, awayTeam, eventDate, eventTime));
+                    ZonedDateTime eventDateTime = fixture.getEventDate();
+                    String status = fixture.getStatus();
+                    String eventDate = getDateString(eventDateTime);
+                    String eventTime = getTimeString(eventDateTime, status);
+                    cachedMessageReference.set(new CachedMessage(homeTeam, awayTeam, eventDateTime, status));
                     resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
                     sendMessage.setText(resultText);
                 } catch (IOException e) {
@@ -148,8 +148,12 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
             executorService.shutdown();
         } else {
             CachedMessage cachedMessage = cachedMessageReference.get();
-            String resultText = createResultText(cachedMessage.getHomeTeam(), cachedMessage.getAwayTeam(),
-                    cachedMessage.getEventDate(), cachedMessage.getEventTime());
+            String homeTeam = cachedMessage.getHomeTeam();
+            String awayTeam = cachedMessage.getAwayTeam();
+            ZonedDateTime eventDateTime = cachedMessage.getEventDateTime();
+            String status = cachedMessage.getStatus();
+            String resultText = createResultText(homeTeam, awayTeam,
+                    getDateString(eventDateTime), getZonedTimeString(eventDateTime, status, timezone));
             sendMessage.setText(resultText);
             try {
                 execute(sendMessage);
@@ -190,6 +194,17 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         } else {
             return date.toLocalTime().format(TIME_FORMATTER);
         }
+    }
+
+    private String getZonedTimeString(ZonedDateTime eventDateTime, String status, String timezone) {
+        if (status.equals(messageTimeToBeDefined)) {
+            return messageTimeToBeDefined;
+        } else if (timezone.equals(apiTimezoneJerusalem)) {
+            return eventDateTime.withZoneSameInstant(ZoneId.of("GMT+2")).toLocalTime().format(TIME_FORMATTER);
+        } else if (timezone.equals(apiTimezoneMoscow)) {
+            return eventDateTime.withZoneSameInstant(ZoneId.of("GMT+3")).toLocalTime().format(TIME_FORMATTER);
+        }
+        throw new RuntimeException("Timezone error");
     }
 
     public String getBotUsername() {
