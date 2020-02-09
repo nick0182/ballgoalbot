@@ -1,10 +1,19 @@
 package com.aws.codestar.projecttemplates.configuration;
 
+import api.ApiRequest;
 import bot.BallGoalBot;
 import com.aws.codestar.projecttemplates.controller.HelloWorldController;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import command.ApiCommand;
+import command.TextCommand;
+import command.impl.ZenitCommand;
+import command.impl.ZenitTimezoneCommand;
 import constants.Command;
+import helper.TimeStringConverter;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -20,10 +29,12 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
+import java.net.URL;
 import java.util.Collections;
+import java.util.Objects;
 
 @Configuration
-@ComponentScan({ "com.aws.codestar.projecttemplates.configuration" })
+@ComponentScan({"com.aws.codestar.projecttemplates.configuration"})
 @PropertySource("classpath:application.properties")
 public class ApplicationConfig {
 
@@ -56,6 +67,9 @@ public class ApplicationConfig {
     @Value("${telegram.bot.token}")
     private String telegramBotToken;
 
+    @Value("${api.cache.threshold.minutes}")
+    private String apiCacheThresholdMinutes;
+
     @Bean
     public HelloWorldController helloWorld() {
         return new HelloWorldController(this.siteName);
@@ -83,28 +97,20 @@ public class ApplicationConfig {
     @Bean
     public BallGoalBot ballGoalBot() {
         return new BallGoalBot(
-                messageTimeToBeDefined,
                 apiTimezoneMoscow,
                 apiTimezoneJerusalem,
                 apiZenitId,
-                apiHost,
-                apiKey,
                 telegramBotName,
                 telegramBotToken
         ) {
             @Override
-            protected ReplyKeyboard getTimezoneKeyboardBean() {
-                return timezoneKeyboard();
+            protected TextCommand getZenitCommand() {
+                return zenitCommand();
             }
 
             @Override
-            protected ReplyKeyboard getRemoveKeyboardBean() {
-                return removeKeyboard();
-            }
-
-            @Override
-            protected ObjectMapper getObjectMapperBean() {
-                return objectMapper();
+            protected ApiCommand getZenitTimezoneCommand() {
+                return zenitTimezoneCommand();
             }
         };
     }
@@ -137,6 +143,42 @@ public class ApplicationConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper;
+    }
+
+    @Bean
+    @Lazy
+    public TextCommand zenitCommand() {
+        return new ZenitCommand(timezoneKeyboard());
+    }
+
+    @Bean
+    @Lazy
+    public ApiCommand zenitTimezoneCommand() {
+        return new ZenitTimezoneCommand(removeKeyboard(), apiRequest(),
+                Integer.parseInt(apiCacheThresholdMinutes), objectMapper(), timeStringConverter());
+    }
+
+    @Bean
+    @Lazy
+    public ApiRequest apiRequest() {
+        return resource -> {
+            OkHttpClient okHttpClient = new OkHttpClient();
+            URL url = new URL("https", apiHost, resource);
+            Request request = new Request.Builder()
+                    .url(url)
+                    .get()
+                    .addHeader("x-rapidapi-host", apiHost)
+                    .addHeader("x-rapidapi-key", apiKey)
+                    .build();
+            Response response = okHttpClient.newCall(request).execute();
+            return Objects.requireNonNull(response.body()).string();
+        };
+    }
+
+    @Bean
+    @Lazy
+    public TimeStringConverter timeStringConverter() {
+        return new TimeStringConverter(messageTimeToBeDefined, apiTimezoneMoscow, apiTimezoneJerusalem);
     }
 
 }
