@@ -11,7 +11,7 @@ phases:
       - mvn clean compile test
   build:
     commands:
-      - mvn war:exploded
+      - mvn package
   post_build:
     commands:
       - cp -r .ebextensions/ target/ROOT/
@@ -24,3 +24,4 @@ artifacts:
   files:
     - template-export.yml
     - template-configuration.json
+    - target/BallGoal.jar
