@@ -2,6 +2,7 @@ package com.aws.codestar.projecttemplates.configuration;
 
 import api.ApiRequest;
 import bot.BallGoalBot;
+import com.aws.codestar.projecttemplates.controller.HelloWorldController;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import command.ApiCommand;
@@ -17,12 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.*;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -37,7 +33,8 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.Objects;
 
-@SpringBootApplication
+@Configuration
+@ComponentScan({"com.aws.codestar.projecttemplates.configuration"})
 @PropertySource("classpath:application.properties")
 public class ApplicationConfig {
 
@@ -73,8 +70,9 @@ public class ApplicationConfig {
     @Value("${api.cache.threshold.minutes}")
     private String apiCacheThresholdMinutes;
 
-    public static void main(String[] args) {
-        SpringApplication.run(ApplicationConfig.class, args);
+    @Bean
+    public HelloWorldController helloWorld() {
+        return new HelloWorldController(this.siteName);
     }
 
     @Bean
