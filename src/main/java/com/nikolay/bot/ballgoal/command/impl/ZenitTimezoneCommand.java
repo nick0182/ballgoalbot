@@ -1,8 +1,8 @@
 package com.nikolay.bot.ballgoal.command.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.cache.CachedMessage;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.command.ApiCommand;
 import com.nikolay.bot.ballgoal.helper.TimeStringConverter;
 import com.nikolay.bot.ballgoal.json.Fixture;
@@ -11,10 +11,11 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+
+import static com.nikolay.bot.ballgoal.constants.Emoji.*;
 
 public class ZenitTimezoneCommand implements ApiCommand {
 
@@ -22,36 +23,28 @@ public class ZenitTimezoneCommand implements ApiCommand {
 
     private ApiRequest apiRequest;
 
-    private final int cacheThresholdMinutes;
+    private int cacheThresholdMinutes;
 
     private LocalTime lastApiTriggerTime;
 
     private ObjectMapper objectMapper;
 
-    private TimeStringConverter timeStringConverter;
+    private String messageTimeToBeDefined;
 
     private CachedMessage cachedMessage = null;
 
-    public static final String EMOJI_HOME_TEAM =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x8F, (byte) 0xA0}, StandardCharsets.UTF_8);
-
-    public static final String EMOJI_AWAY_TEAM =
-            new String(new byte[]{(byte) 0xE2, (byte) 0x9C, (byte) 0x88}, StandardCharsets.UTF_8);
-
-    public static final String EMOJI_DATE =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x93, (byte) 0x85}, StandardCharsets.UTF_8);
-
-    public static final String EMOJI_TIME =
-            new String(new byte[]{(byte) 0xF0, (byte) 0x9F, (byte) 0x95, (byte) 0xA3}, StandardCharsets.UTF_8);
-
-
-    public ZenitTimezoneCommand(ReplyKeyboard keyboard, ApiRequest apiRequest, int cacheThresholdMinutes,
-                                ObjectMapper objectMapper, TimeStringConverter timeStringConverter) {
+    public ZenitTimezoneCommand(
+            ReplyKeyboard keyboard,
+            ApiRequest apiRequest,
+            int cacheThresholdMinutes,
+            ObjectMapper objectMapper,
+            String messageTimeToBeDefined
+    ) {
         this.keyboard = keyboard;
         this.apiRequest = apiRequest;
         this.cacheThresholdMinutes = cacheThresholdMinutes;
         this.objectMapper = objectMapper;
-        this.timeStringConverter = timeStringConverter;
+        this.messageTimeToBeDefined = messageTimeToBeDefined;
         lastApiTriggerTime = LocalTime.now(ZoneId.systemDefault()).minusMinutes(cacheThresholdMinutes);
     }
 
@@ -72,9 +65,14 @@ public class ZenitTimezoneCommand implements ApiCommand {
                 String homeTeam = fixture.getHomeTeam().getTeam_name();
                 String awayTeam = fixture.getAwayTeam().getTeam_name();
                 ZonedDateTime eventDateTime = fixture.getEventDate();
+                String eventDate = TimeStringConverter.getDateString(eventDateTime);
                 String status = fixture.getStatus();
-                String eventDate = timeStringConverter.getDateString(eventDateTime);
-                String eventTime = timeStringConverter.getTimeString(eventDateTime, status);
+                String eventTime;
+                if (status.equals(messageTimeToBeDefined)) {
+                    eventTime = messageTimeToBeDefined;
+                } else {
+                    eventTime = TimeStringConverter.getTimeString(eventDateTime);
+                }
                 cachedMessage = new CachedMessage(homeTeam, awayTeam, eventDateTime, status);
                 resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
                 sendMessage.setText(resultText);
@@ -83,13 +81,17 @@ public class ZenitTimezoneCommand implements ApiCommand {
                 sendMessage.setText("Server error. Please try again later");
             }
         } else {
-            String status = cachedMessage.getStatus();
-            String timezone = extractTimezoneFromResource(resource);
             String homeTeam = cachedMessage.getHomeTeam();
             String awayTeam = cachedMessage.getAwayTeam();
             ZonedDateTime eventDateTime = cachedMessage.getEventDateTime();
-            String eventDate = timeStringConverter.getDateString(eventDateTime);
-            String eventTime = timeStringConverter.getZonedTimeString(eventDateTime, status, timezone);
+            String eventDate = TimeStringConverter.getDateString(eventDateTime);
+            String status = cachedMessage.getStatus();
+            String eventTime;
+            if (status.equals(messageTimeToBeDefined)) {
+                eventTime = messageTimeToBeDefined;
+            } else {
+                eventTime = TimeStringConverter.getZonedTimeString(eventDateTime, resource);
+            }
             String resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
             sendMessage.setText(resultText);
         }
@@ -99,10 +101,6 @@ public class ZenitTimezoneCommand implements ApiCommand {
     private String createResultText(String homeTeam, String awayTeam, String eventDate, String eventTime) {
         return EMOJI_HOME_TEAM + " " + homeTeam + "\n" + EMOJI_AWAY_TEAM + " " + awayTeam
                 + "\n" + EMOJI_DATE + " " + eventDate + "\n" + EMOJI_TIME + " " + eventTime;
-    }
-
-    private String extractTimezoneFromResource(String resource) {
-        return resource.split("timezone=")[1];
     }
 
 }

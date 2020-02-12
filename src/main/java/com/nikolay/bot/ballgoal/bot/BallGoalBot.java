@@ -13,29 +13,22 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
-    private String apiTimezoneMoscow;
-
-    private String apiTimezoneJerusalem;
-
-    private String apiZenitId;
-
     private String botName;
 
     private String botToken;
 
+    private String timezoneJerusalemResource;
+
+    private String timezoneMoscowResource;
+
     private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
 
-    public BallGoalBot(
-            String apiTimezoneMoscow,
-            String apiTimezoneJerusalem,
-            String apiZenitId,
-            String botName,
-            String botToken) {
-        this.apiTimezoneMoscow = apiTimezoneMoscow;
-        this.apiTimezoneJerusalem = apiTimezoneJerusalem;
-        this.apiZenitId = apiZenitId;
+    public BallGoalBot(String botName, String botToken,
+                       String timezoneJerusalemResource, String timezoneMoscowResource) {
         this.botName = botName;
         this.botToken = botToken;
+        this.timezoneJerusalemResource = timezoneJerusalemResource;
+        this.timezoneMoscowResource = timezoneMoscowResource;
     }
 
     public void onUpdateReceived(Update update) {
@@ -49,12 +42,10 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                 sendMessage = getZenitCommand().generateMessage();
                 break;
             case Command.TIMEZONE_JERUSALEM:
-                sendMessage = getZenitTimezoneCommand().generateMessage("/v2/fixtures/team/"
-                        + apiZenitId + "/next/1?timezone=" + apiTimezoneJerusalem);
+                sendMessage = getZenitTimezoneCommand().generateMessage(timezoneJerusalemResource);
                 break;
             case Command.TIMEZONE_SAINT_PETERSBURG:
-                sendMessage = getZenitTimezoneCommand().generateMessage("/v2/fixtures/team/"
-                        + apiZenitId + "/next/1?timezone=" + apiTimezoneMoscow);
+                sendMessage = getZenitTimezoneCommand().generateMessage(timezoneMoscowResource);
                 break;
             default:
                 return;

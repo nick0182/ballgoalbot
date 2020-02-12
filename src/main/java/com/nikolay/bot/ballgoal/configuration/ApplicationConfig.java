@@ -1,15 +1,14 @@
 package com.nikolay.bot.ballgoal.configuration;
 
-import com.nikolay.bot.ballgoal.api.ApiRequest;
-import com.nikolay.bot.ballgoal.bot.BallGoalBot;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nikolay.bot.ballgoal.api.ApiRequest;
+import com.nikolay.bot.ballgoal.bot.BallGoalBot;
 import com.nikolay.bot.ballgoal.command.ApiCommand;
 import com.nikolay.bot.ballgoal.command.TextCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitTimezoneCommand;
 import com.nikolay.bot.ballgoal.constants.Command;
-import com.nikolay.bot.ballgoal.helper.TimeStringConverter;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -46,14 +45,11 @@ public class ApplicationConfig {
     @Value("${message.time.tbd}")
     private String messageTimeToBeDefined;
 
-    @Value("${api.timezone.moscow}")
-    private String apiTimezoneMoscow;
+    @Value("${api.resource.timezone.moscow}")
+    private String apiResourceTimezoneMoscow;
 
-    @Value("${api.timezone.jerusalem}")
-    private String apiTimezoneJerusalem;
-
-    @Value("${api.zenit.id}")
-    private String apiZenitId;
+    @Value("${api.resource.timezone.jerusalem}")
+    private String apiResourceTimezoneJerusalem;
 
     @Value("${api.host}")
     private String apiHost;
@@ -96,11 +92,10 @@ public class ApplicationConfig {
     @Bean
     public BallGoalBot ballGoalBot() {
         return new BallGoalBot(
-                apiTimezoneMoscow,
-                apiTimezoneJerusalem,
-                apiZenitId,
                 botName,
-                botToken
+                botToken,
+                apiResourceTimezoneJerusalem,
+                apiResourceTimezoneMoscow
         ) {
             @Override
             protected TextCommand getZenitCommand() {
@@ -153,8 +148,13 @@ public class ApplicationConfig {
     @Bean
     @Lazy
     public ApiCommand zenitTimezoneCommand() {
-        return new ZenitTimezoneCommand(removeKeyboard(), apiRequest(),
-                Integer.parseInt(apiCacheThresholdMinutes), objectMapper(), timeStringConverter());
+        return new ZenitTimezoneCommand(
+                removeKeyboard(),
+                apiRequest(),
+                Integer.parseInt(apiCacheThresholdMinutes),
+                objectMapper(),
+                messageTimeToBeDefined
+        );
     }
 
     @Bean
@@ -172,12 +172,6 @@ public class ApplicationConfig {
             Response response = okHttpClient.newCall(request).execute();
             return Objects.requireNonNull(response.body()).string();
         };
-    }
-
-    @Bean
-    @Lazy
-    public TimeStringConverter timeStringConverter() {
-        return new TimeStringConverter(messageTimeToBeDefined, apiTimezoneMoscow, apiTimezoneJerusalem);
     }
 
 }
