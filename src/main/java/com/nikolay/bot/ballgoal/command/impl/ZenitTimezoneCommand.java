@@ -5,6 +5,7 @@ import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.cache.CachedMessage;
 import com.nikolay.bot.ballgoal.command.ApiCommand;
 import com.nikolay.bot.ballgoal.helper.TimeStringConverter;
+import com.nikolay.bot.ballgoal.helper.ZoneGetter;
 import com.nikolay.bot.ballgoal.json.Fixture;
 import com.nikolay.bot.ballgoal.json.Result;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -38,14 +39,15 @@ public class ZenitTimezoneCommand implements ApiCommand {
             ApiRequest apiRequest,
             int cacheThresholdMinutes,
             ObjectMapper objectMapper,
-            String messageTimeToBeDefined
+            String messageTimeToBeDefined,
+            LocalTime lastApiTriggerTime
     ) {
         this.keyboard = keyboard;
         this.apiRequest = apiRequest;
         this.cacheThresholdMinutes = cacheThresholdMinutes;
         this.objectMapper = objectMapper;
         this.messageTimeToBeDefined = messageTimeToBeDefined;
-        lastApiTriggerTime = LocalTime.now(ZoneId.systemDefault()).minusMinutes(cacheThresholdMinutes);
+        this.lastApiTriggerTime = lastApiTriggerTime;
     }
 
     @Override
@@ -57,7 +59,6 @@ public class ZenitTimezoneCommand implements ApiCommand {
 
         if (threshold > 0) {
             lastApiTriggerTime = now;
-            String resultText;
             try {
                 String json = apiRequest.call(resource);
                 Result result = objectMapper.readValue(json, Result.class);
@@ -68,13 +69,14 @@ public class ZenitTimezoneCommand implements ApiCommand {
                 String eventDate = TimeStringConverter.getDateString(eventDateTime);
                 String status = fixture.getStatus();
                 String eventTime;
+                // TODO: add new statuses (i.e "in progress")
                 if (status.equals(messageTimeToBeDefined)) {
                     eventTime = messageTimeToBeDefined;
                 } else {
                     eventTime = TimeStringConverter.getTimeString(eventDateTime);
                 }
                 cachedMessage = new CachedMessage(homeTeam, awayTeam, eventDateTime, status);
-                resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
+                String resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
                 sendMessage.setText(resultText);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -90,7 +92,8 @@ public class ZenitTimezoneCommand implements ApiCommand {
             if (status.equals(messageTimeToBeDefined)) {
                 eventTime = messageTimeToBeDefined;
             } else {
-                eventTime = TimeStringConverter.getZonedTimeString(eventDateTime, resource);
+                ZoneId zone = ZoneGetter.getFromResource(resource);
+                eventTime = TimeStringConverter.getZonedTimeString(eventDateTime, zone);
             }
             String resultText = createResultText(homeTeam, awayTeam, eventDate, eventTime);
             sendMessage.setText(resultText);

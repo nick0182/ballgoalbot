@@ -3,15 +3,13 @@ package com.nikolay.bot.ballgoal.configuration;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
+import com.nikolay.bot.ballgoal.api.impl.ApiRequestFootball;
 import com.nikolay.bot.ballgoal.bot.BallGoalBot;
 import com.nikolay.bot.ballgoal.command.ApiCommand;
 import com.nikolay.bot.ballgoal.command.TextCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitTimezoneCommand;
 import com.nikolay.bot.ballgoal.constants.Command;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -32,9 +30,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
-import java.net.URL;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Collections;
-import java.util.Objects;
 
 @SpringBootApplication
 @PropertySource("classpath:application.properties")
@@ -148,30 +146,21 @@ public class ApplicationConfig {
     @Bean
     @Lazy
     public ApiCommand zenitTimezoneCommand() {
+        int thresholdMinutes = Integer.parseInt(apiCacheThresholdMinutes);
         return new ZenitTimezoneCommand(
                 removeKeyboard(),
                 apiRequest(),
-                Integer.parseInt(apiCacheThresholdMinutes),
+                thresholdMinutes,
                 objectMapper(),
-                messageTimeToBeDefined
+                messageTimeToBeDefined,
+                LocalTime.now(ZoneId.systemDefault()).minusMinutes(thresholdMinutes)
         );
     }
 
     @Bean
     @Lazy
     public ApiRequest apiRequest() {
-        return resource -> {
-            OkHttpClient okHttpClient = new OkHttpClient();
-            URL url = new URL("https", apiHost, resource);
-            Request request = new Request.Builder()
-                    .url(url)
-                    .get()
-                    .addHeader("x-rapidapi-host", apiHost)
-                    .addHeader("x-rapidapi-key", apiKey)
-                    .build();
-            Response response = okHttpClient.newCall(request).execute();
-            return Objects.requireNonNull(response.body()).string();
-        };
+        return new ApiRequestFootball(apiHost, apiKey);
     }
 
 }

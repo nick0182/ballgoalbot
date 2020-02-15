@@ -31,6 +31,7 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         this.timezoneMoscowResource = timezoneMoscowResource;
     }
 
+    //TODO: test it only with Spring context (Integration test)
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
         String command = message.getText();
