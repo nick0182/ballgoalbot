@@ -13,23 +13,15 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
-    private String botName;
+    private String name;
 
-    private String botToken;
+    private String token;
 
-    private String timezoneJerusalemResource;
+    private String apiResourceTimezoneJerusalem;
 
-    private String timezoneMoscowResource;
+    private String apiResourceTimezoneMoscow;
 
     private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
-
-    public BallGoalBot(String botName, String botToken,
-                       String timezoneJerusalemResource, String timezoneMoscowResource) {
-        this.botName = botName;
-        this.botToken = botToken;
-        this.timezoneJerusalemResource = timezoneJerusalemResource;
-        this.timezoneMoscowResource = timezoneMoscowResource;
-    }
 
     //TODO: test it only with Spring context (Integration test)
     public void onUpdateReceived(Update update) {
@@ -43,10 +35,10 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                 sendMessage = getZenitCommand().generateMessage();
                 break;
             case Command.TIMEZONE_JERUSALEM:
-                sendMessage = getZenitTimezoneCommand().generateMessage(timezoneJerusalemResource);
+                sendMessage = getZenitTimezoneCommand().generateMessage(apiResourceTimezoneJerusalem);
                 break;
             case Command.TIMEZONE_SAINT_PETERSBURG:
-                sendMessage = getZenitTimezoneCommand().generateMessage(timezoneMoscowResource);
+                sendMessage = getZenitTimezoneCommand().generateMessage(apiResourceTimezoneMoscow);
                 break;
             default:
                 return;
@@ -59,12 +51,28 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         }
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public void setApiResourceTimezoneJerusalem(String apiResourceTimezoneJerusalem) {
+        this.apiResourceTimezoneJerusalem = apiResourceTimezoneJerusalem;
+    }
+
+    public void setApiResourceTimezoneMoscow(String apiResourceTimezoneMoscow) {
+        this.apiResourceTimezoneMoscow = apiResourceTimezoneMoscow;
+    }
+
     public String getBotUsername() {
-        return botName;
+        return name;
     }
 
     public String getBotToken() {
-        return botToken;
+        return token;
     }
 
     protected abstract TextCommand getZenitCommand();

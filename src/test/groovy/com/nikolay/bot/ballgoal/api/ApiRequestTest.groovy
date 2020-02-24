@@ -5,8 +5,13 @@ import spock.lang.Specification
 
 class ApiRequestTest extends Specification {
 
-    def request = new ApiRequestFootball("api-football-v1.p.rapidapi.com",
-            "1cccd3131bmshed7ddf66e006ec5p168f9fjsn3ab66e62ad85")
+    def request
+
+    def setup() {
+        request = new ApiRequestFootball()
+        request.host = "api-football-v1.p.rapidapi.com"
+        request.key = "1cccd3131bmshed7ddf66e006ec5p168f9fjsn3ab66e62ad85"
+    }
 
     def "should throw exception when non-existing resource"() {
         given: "non-existing resource"

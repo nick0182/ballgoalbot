@@ -11,24 +11,19 @@ import java.util.Objects;
 
 public class ApiRequestFootball implements ApiRequest {
 
-    private final String apiHost;
+    private String host;
 
-    private final String apiKey;
-
-    public ApiRequestFootball(String apiHost, String apiKey) {
-        this.apiHost = apiHost;
-        this.apiKey = apiKey;
-    }
+    private String key;
 
     @Override
     public String call(String resource) throws IOException {
         OkHttpClient okHttpClient = new OkHttpClient();
-        URL url = new URL("https", apiHost, resource);
+        URL url = new URL("https", host, resource);
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader("x-rapidapi-host", apiHost)
-                .addHeader("x-rapidapi-key", apiKey)
+                .addHeader("x-rapidapi-host", host)
+                .addHeader("x-rapidapi-key", key)
                 .build();
         Response response = okHttpClient.newCall(request).execute();
         int statusCode = response.code();
@@ -37,5 +32,13 @@ public class ApiRequestFootball implements ApiRequest {
         } else {
             throw new IllegalArgumentException("resource not found");
         }
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 }

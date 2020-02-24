@@ -13,15 +13,14 @@ import com.nikolay.bot.ballgoal.constants.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.telegram.telegrambots.ApiContextInitializer;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -30,47 +29,15 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.Collections;
 
 @SpringBootApplication
-@PropertySource("classpath:application.properties")
 public class ApplicationConfig {
 
     private static final Logger LOG = LoggerFactory.getLogger(ApplicationConfig.class);
 
-    @Value("${message.time.tbd}")
-    private String messageTimeToBeDefined;
-
-    @Value("${api.resource.timezone.moscow}")
-    private String apiResourceTimezoneMoscow;
-
-    @Value("${api.resource.timezone.jerusalem}")
-    private String apiResourceTimezoneJerusalem;
-
-    @Value("${api.host}")
-    private String apiHost;
-
-    @Value("${api.key}")
-    private String apiKey;
-
-    @Value("${bot.name}")
-    private String botName;
-
-    @Value("${bot.token}")
-    private String botToken;
-
-    @Value("${api.cache.threshold.minutes}")
-    private String apiCacheThresholdMinutes;
-
     public static void main(String[] args) {
         SpringApplication.run(ApplicationConfig.class, args);
-    }
-
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer placeHolderConfigurer() {
-        return new PropertySourcesPlaceholderConfigurer();
     }
 
     @Bean
@@ -88,13 +55,9 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public BallGoalBot ballGoalBot() {
-        return new BallGoalBot(
-                botName,
-                botToken,
-                apiResourceTimezoneJerusalem,
-                apiResourceTimezoneMoscow
-        ) {
+    @ConfigurationProperties(prefix = "bot")
+    public TelegramLongPollingBot ballGoalBot() {
+        return new BallGoalBot() {
             @Override
             protected TextCommand getZenitCommand() {
                 return zenitCommand();
@@ -146,21 +109,15 @@ public class ApplicationConfig {
     @Bean
     @Lazy
     public ApiCommand zenitTimezoneCommand() {
-        int thresholdMinutes = Integer.parseInt(apiCacheThresholdMinutes);
-        return new ZenitTimezoneCommand(
-                removeKeyboard(),
-                apiRequest(),
-                thresholdMinutes,
-                objectMapper(),
-                messageTimeToBeDefined,
-                LocalTime.now(ZoneId.systemDefault()).minusMinutes(thresholdMinutes)
-        );
+        return new ZenitTimezoneCommand(removeKeyboard(), apiRequest(), objectMapper(),
+                15, "Time to be defined");
     }
 
     @Bean
     @Lazy
+    @ConfigurationProperties(prefix = "api")
     public ApiRequest apiRequest() {
-        return new ApiRequestFootball(apiHost, apiKey);
+        return new ApiRequestFootball();
     }
 
 }

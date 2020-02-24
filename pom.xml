@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.nikolay.bot</groupId>
     <artifactId>ballgoal</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>BallGoalBot</name>
     <description>Telegram bot for getting various info about Zenit football team</description>
 
@@ -75,7 +75,7 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>3.0.0</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
@@ -93,8 +93,19 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>compile</goal>
                             <goal>compileTests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>auto-clean</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>clean</goal>
                         </goals>
                     </execution>
                 </executions>

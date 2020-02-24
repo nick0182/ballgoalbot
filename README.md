@@ -1,1 +1,1 @@
-Telegram com.nikolay.bot.ballgoal.bot for getting various info about Zenit football team
+Telegram bot for getting various info about Zenit football team

@@ -30,24 +30,18 @@ public class ZenitTimezoneCommand implements ApiCommand {
 
     private ObjectMapper objectMapper;
 
-    private String messageTimeToBeDefined;
+    private String messageTimeNotDefined;
 
     private CachedMessage cachedMessage = null;
 
-    public ZenitTimezoneCommand(
-            ReplyKeyboard keyboard,
-            ApiRequest apiRequest,
-            int cacheThresholdMinutes,
-            ObjectMapper objectMapper,
-            String messageTimeToBeDefined,
-            LocalTime lastApiTriggerTime
-    ) {
+    public ZenitTimezoneCommand(ReplyKeyboard keyboard, ApiRequest apiRequest,
+                                ObjectMapper objectMapper, int cacheThresholdMinutes, String messageTimeNotDefined) {
         this.keyboard = keyboard;
         this.apiRequest = apiRequest;
-        this.cacheThresholdMinutes = cacheThresholdMinutes;
         this.objectMapper = objectMapper;
-        this.messageTimeToBeDefined = messageTimeToBeDefined;
-        this.lastApiTriggerTime = lastApiTriggerTime;
+        this.cacheThresholdMinutes = cacheThresholdMinutes;
+        this.messageTimeNotDefined = messageTimeNotDefined;
+        lastApiTriggerTime = LocalTime.now(ZoneId.systemDefault()).minusMinutes(cacheThresholdMinutes);
     }
 
     @Override
@@ -70,8 +64,8 @@ public class ZenitTimezoneCommand implements ApiCommand {
                 String status = fixture.getStatus();
                 String eventTime;
                 // TODO: add new statuses (i.e "in progress")
-                if (status.equals(messageTimeToBeDefined)) {
-                    eventTime = messageTimeToBeDefined;
+                if (status.equals(messageTimeNotDefined)) {
+                    eventTime = messageTimeNotDefined;
                 } else {
                     eventTime = TimeStringConverter.getTimeString(eventDateTime);
                 }
@@ -89,8 +83,8 @@ public class ZenitTimezoneCommand implements ApiCommand {
             String eventDate = TimeStringConverter.getDateString(eventDateTime);
             String status = cachedMessage.getStatus();
             String eventTime;
-            if (status.equals(messageTimeToBeDefined)) {
-                eventTime = messageTimeToBeDefined;
+            if (status.equals(messageTimeNotDefined)) {
+                eventTime = messageTimeNotDefined;
             } else {
                 ZoneId zone = ZoneGetter.getFromResource(resource);
                 eventTime = TimeStringConverter.getZonedTimeString(eventDateTime, zone);
