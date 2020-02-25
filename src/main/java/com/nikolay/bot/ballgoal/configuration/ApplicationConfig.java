@@ -3,13 +3,16 @@ package com.nikolay.bot.ballgoal.configuration;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
-import com.nikolay.bot.ballgoal.api.impl.ApiRequestFootball;
+import com.nikolay.bot.ballgoal.api.impl.ApiRequestFixture;
+import com.nikolay.bot.ballgoal.api.impl.ApiRequestImage;
 import com.nikolay.bot.ballgoal.bot.BallGoalBot;
-import com.nikolay.bot.ballgoal.command.ApiCommand;
-import com.nikolay.bot.ballgoal.command.TextCommand;
+import com.nikolay.bot.ballgoal.cache.ZenitCache;
+import com.nikolay.bot.ballgoal.command.Command;
+import com.nikolay.bot.ballgoal.command.impl.LeagueStandingCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitTimezoneCommand;
-import com.nikolay.bot.ballgoal.constants.Command;
+import com.nikolay.bot.ballgoal.constants.Commands;
+import com.nikolay.bot.ballgoal.properties.ResourceProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -22,6 +25,8 @@ import org.springframework.context.annotation.Lazy;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
@@ -59,15 +64,32 @@ public class ApplicationConfig {
     public TelegramLongPollingBot ballGoalBot() {
         return new BallGoalBot() {
             @Override
-            protected TextCommand getZenitCommand() {
+            protected Command<SendMessage> getZenitCommand() {
                 return zenitCommand();
             }
 
             @Override
-            protected ApiCommand getZenitTimezoneCommand() {
-                return zenitTimezoneCommand();
+            protected Command<SendMessage> getZenitTimezoneJerusalemCommand() {
+                return zenitTimezoneJerusalemCommand();
+            }
+
+            @Override
+            public Command<SendMessage> getZenitTimezoneMoscowCommand() {
+                return zenitTimezoneMoscowCommand();
+            }
+
+            @Override
+            protected Command<SendPhoto> getLeagueStandingCommand() {
+                return leagueStandingCommand();
             }
         };
+    }
+
+    @Bean
+    @Lazy
+    @ConfigurationProperties(prefix = "resource")
+    public ResourceProperties resourceProperties() {
+        return new ResourceProperties();
     }
 
     @Bean
@@ -78,8 +100,8 @@ public class ApplicationConfig {
         timezoneKeyboard.setSelective(true);
         timezoneKeyboard.setResizeKeyboard(true);
         KeyboardRow keyboardRow = new KeyboardRow();
-        KeyboardButton firstKeyboardButton = new KeyboardButton(Command.TIMEZONE_JERUSALEM);
-        KeyboardButton secondKeyboardButton = new KeyboardButton(Command.TIMEZONE_SAINT_PETERSBURG);
+        KeyboardButton firstKeyboardButton = new KeyboardButton(Commands.TIMEZONE_JERUSALEM);
+        KeyboardButton secondKeyboardButton = new KeyboardButton(Commands.TIMEZONE_SAINT_PETERSBURG);
         keyboardRow.add(firstKeyboardButton);
         keyboardRow.add(secondKeyboardButton);
         timezoneKeyboard.setKeyboard(Collections.singletonList(keyboardRow));
@@ -102,22 +124,50 @@ public class ApplicationConfig {
 
     @Bean
     @Lazy
-    public TextCommand zenitCommand() {
+    public Command<SendMessage> zenitCommand() {
         return new ZenitCommand(timezoneKeyboard());
     }
 
-    @Bean
+    @Bean(initMethod = "init")
     @Lazy
-    public ApiCommand zenitTimezoneCommand() {
-        return new ZenitTimezoneCommand(removeKeyboard(), apiRequest(), objectMapper(),
-                15, "Time to be defined");
+    @ConfigurationProperties(prefix = "jerusalem")
+    public Command<SendMessage> zenitTimezoneJerusalemCommand() {
+        return new ZenitTimezoneCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
+    }
+
+    @Bean(initMethod = "init")
+    @Lazy
+    @ConfigurationProperties(prefix = "moscow")
+    public Command<SendMessage> zenitTimezoneMoscowCommand() {
+        return new ZenitTimezoneCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
     }
 
     @Bean
     @Lazy
-    @ConfigurationProperties(prefix = "api")
-    public ApiRequest apiRequest() {
-        return new ApiRequestFootball();
+    @ConfigurationProperties(prefix = "jerusalem")
+    public Command<SendPhoto> leagueStandingCommand() {
+        return new LeagueStandingCommand(resourceProperties(), removeKeyboard(),
+                apiRequestFixture(), apiRequestImage(), objectMapper());
+    }
+
+    @Bean
+    @Lazy
+    public ZenitCache zenitCache() {
+        return new ZenitCache(15);
+    }
+
+    @Bean
+    @Lazy
+    @ConfigurationProperties(prefix = "api.fixture")
+    public ApiRequest apiRequestFixture() {
+        return new ApiRequestFixture();
+    }
+
+    @Bean
+    @Lazy
+    @ConfigurationProperties(prefix = "api.image")
+    public ApiRequest apiRequestImage() {
+        return new ApiRequestImage();
     }
 
 }

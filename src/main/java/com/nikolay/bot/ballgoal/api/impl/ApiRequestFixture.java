@@ -1,24 +1,30 @@
 package com.nikolay.bot.ballgoal.api.impl;
 
 import com.nikolay.bot.ballgoal.api.ApiRequest;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
-import java.net.URL;
+import java.time.ZoneId;
 import java.util.Objects;
 
-public class ApiRequestFootball implements ApiRequest {
+public class ApiRequestFixture implements ApiRequest {
 
     private String host;
 
     private String key;
 
     @Override
-    public String call(String resource) throws IOException {
+    public String call(String resource, ZoneId zoneId) throws IOException {
         OkHttpClient okHttpClient = new OkHttpClient();
-        URL url = new URL("https", host, resource);
+        HttpUrl url = new HttpUrl.Builder()
+                .scheme("https")
+                .host(host)
+                .addPathSegments(resource)
+                .addQueryParameter("timezone", zoneId.getId())
+                .build();
         Request request = new Request.Builder()
                 .url(url)
                 .get()

@@ -1,25 +1,26 @@
 package com.nikolay.bot.ballgoal.bot;
 
-import com.nikolay.bot.ballgoal.command.ApiCommand;
-import com.nikolay.bot.ballgoal.command.TextCommand;
-import com.nikolay.bot.ballgoal.constants.Command;
+import com.nikolay.bot.ballgoal.command.Command;
+import com.nikolay.bot.ballgoal.constants.Commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
+// TODO: add Lombok
+// TODO: try to go to Java 11
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private String name;
 
     private String token;
-
-    private String apiResourceTimezoneJerusalem;
-
-    private String apiResourceTimezoneMoscow;
 
     private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
 
@@ -27,27 +28,52 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
         String command = message.getText();
-        LOG.info("Command received: {}", command);
+        LOG.debug("Command received: {}", command);
         long chatId = message.getChatId();
-        SendMessage sendMessage;
-        switch (command) {
-            case Command.ZENIT:
-                sendMessage = getZenitCommand().generateMessage();
-                break;
-            case Command.TIMEZONE_JERUSALEM:
-                sendMessage = getZenitTimezoneCommand().generateMessage(apiResourceTimezoneJerusalem);
-                break;
-            case Command.TIMEZONE_SAINT_PETERSBURG:
-                sendMessage = getZenitTimezoneCommand().generateMessage(apiResourceTimezoneMoscow);
-                break;
-            default:
-                return;
-        }
-        sendMessage.setChatId(chatId);
         try {
-            execute(sendMessage);
+            switch (command) {
+                case Commands.ZENIT:
+                    executeMessage(getZenitCommand(), chatId);
+                    break;
+                case Commands.TIMEZONE_JERUSALEM:
+                    executeMessage(getZenitTimezoneJerusalemCommand(), chatId);
+                    break;
+                case Commands.TIMEZONE_SAINT_PETERSBURG:
+                    executeMessage(getZenitTimezoneMoscowCommand(), chatId);
+                    break;
+                case Commands.LEAGUE_STANDING:
+                    executePhoto(getLeagueStandingCommand(), chatId);
+                    break;
+            }
         } catch (TelegramApiException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void executeMessage(Command<SendMessage> command, long chatId) throws TelegramApiException {
+        SendMessage messageResult = command.getResult();
+        messageResult.setChatId(chatId);
+        execute(messageResult);
+    }
+
+    private void executePhoto(Command<SendPhoto> command, long chatId) throws TelegramApiException {
+        SendPhoto photoResult = command.getResult();
+        photoResult.setChatId(chatId);
+        boolean isNewPhoto = isPhotoIdURL(photoResult.getPhoto().getAttachName());
+        if (isNewPhoto) {
+            Message file = execute(photoResult);
+            photoResult.setPhoto(file.getPhoto().get(0).getFileId());
+        } else {
+            execute(photoResult);
+        }
+    }
+
+    private boolean isPhotoIdURL(String photoId) {
+        try {
+            new URL(photoId);
+            return true;
+        } catch (MalformedURLException e) {
+            return false;
         }
     }
 
@@ -59,14 +85,6 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         this.token = token;
     }
 
-    public void setApiResourceTimezoneJerusalem(String apiResourceTimezoneJerusalem) {
-        this.apiResourceTimezoneJerusalem = apiResourceTimezoneJerusalem;
-    }
-
-    public void setApiResourceTimezoneMoscow(String apiResourceTimezoneMoscow) {
-        this.apiResourceTimezoneMoscow = apiResourceTimezoneMoscow;
-    }
-
     public String getBotUsername() {
         return name;
     }
@@ -75,8 +93,12 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         return token;
     }
 
-    protected abstract TextCommand getZenitCommand();
+    protected abstract Command<SendMessage> getZenitCommand();
 
-    protected abstract ApiCommand getZenitTimezoneCommand();
+    protected abstract Command<SendMessage> getZenitTimezoneJerusalemCommand();
+
+    protected abstract Command<SendMessage> getZenitTimezoneMoscowCommand();
+
+    protected abstract Command<SendPhoto> getLeagueStandingCommand();
 
 }

@@ -1,4 +1,4 @@
-package com.nikolay.bot.ballgoal.json;
+package com.nikolay.bot.ballgoal.json.fixture;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

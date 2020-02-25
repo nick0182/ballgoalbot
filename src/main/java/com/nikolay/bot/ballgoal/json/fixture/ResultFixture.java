@@ -1,6 +1,6 @@
-package com.nikolay.bot.ballgoal.json;
+package com.nikolay.bot.ballgoal.json.fixture;
 
-public class Result {
+public class ResultFixture {
 
     private Api api;
 
