@@ -6,11 +6,10 @@ import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.api.impl.ApiRequestFixture;
 import com.nikolay.bot.ballgoal.api.impl.ApiRequestImage;
 import com.nikolay.bot.ballgoal.bot.BallGoalBot;
-import com.nikolay.bot.ballgoal.cache.ZenitCache;
 import com.nikolay.bot.ballgoal.command.Command;
 import com.nikolay.bot.ballgoal.command.impl.LeagueStandingCommand;
+import com.nikolay.bot.ballgoal.command.impl.TimezoneCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitCommand;
-import com.nikolay.bot.ballgoal.command.impl.ZenitTimezoneCommand;
 import com.nikolay.bot.ballgoal.constants.Commands;
 import com.nikolay.bot.ballgoal.properties.ResourceProperties;
 import org.slf4j.Logger;
@@ -65,45 +64,82 @@ public class ApplicationConfig {
         return new BallGoalBot() {
             @Override
             protected Command<SendMessage> getZenitCommand() {
-                return zenitCommand();
+                return zenitTimezoneCommand();
             }
 
             @Override
-            protected Command<SendMessage> getZenitTimezoneJerusalemCommand() {
-                return zenitTimezoneJerusalemCommand();
+            protected Command<SendMessage> getZenitJerusalemCommand() {
+                return zenitJerusalemCommand();
             }
 
             @Override
-            public Command<SendMessage> getZenitTimezoneMoscowCommand() {
-                return zenitTimezoneMoscowCommand();
+            public Command<SendMessage> getZenitSaintPetersburgCommand() {
+                return zenitSaintPetersburgCommand();
             }
 
             @Override
-            protected Command<SendPhoto> getLeagueStandingCommand() {
-                return leagueStandingCommand();
+            protected Command<SendMessage> getLeagueStandingCommand() {
+                return leagueTimezoneCommand();
+            }
+
+            @Override
+            protected Command<SendPhoto> getLeagueStandingJerusalemCommand() {
+                return leagueStandingJerusalemCommand();
+            }
+
+            @Override
+            protected Command<SendPhoto> getLeagueStandingSaintPetersburgCommand() {
+                return leagueStandingSaintPetersburgCommand();
             }
         };
     }
 
+    // <-----------Keyboards---------------->
+
     @Bean
     @Lazy
-    @ConfigurationProperties(prefix = "resource")
-    public ResourceProperties resourceProperties() {
-        return new ResourceProperties();
+    public KeyboardButton zenitJerusalemButton() {
+        return new KeyboardButton(Commands.ZENIT_JERUSALEM);
     }
 
     @Bean
     @Lazy
-    public ReplyKeyboard timezoneKeyboard() {
+    public KeyboardButton zenitSaintPetersburgButton() {
+        return new KeyboardButton(Commands.ZENIT_SAINT_PETERSBURG);
+    }
+
+    @Bean
+    @Lazy
+    public KeyboardButton leagueJerusalemButton() {
+        return new KeyboardButton(Commands.LEAGUE_STANDING_JERUSALEM);
+    }
+
+    @Bean
+    @Lazy
+    public KeyboardButton leagueSaintPetersburgButton() {
+        return new KeyboardButton(Commands.LEAGUE_STANDING_SAINT_PETERSBURG);
+    }
+
+    @Bean
+    @Lazy
+    public ReplyKeyboard zenitTimezoneKeyboard() {
+        return createKeyboard(zenitJerusalemButton(), zenitSaintPetersburgButton());
+    }
+
+    @Bean
+    @Lazy
+    public ReplyKeyboard leagueTimezoneKeyboard() {
+        return createKeyboard(leagueJerusalemButton(), leagueSaintPetersburgButton());
+    }
+
+    private ReplyKeyboard createKeyboard(KeyboardButton jerusalemButton, KeyboardButton saintPetersburgButton) {
         ReplyKeyboardMarkup timezoneKeyboard = new ReplyKeyboardMarkup();
         timezoneKeyboard.setOneTimeKeyboard(true);
         timezoneKeyboard.setSelective(true);
         timezoneKeyboard.setResizeKeyboard(true);
         KeyboardRow keyboardRow = new KeyboardRow();
-        KeyboardButton firstKeyboardButton = new KeyboardButton(Commands.TIMEZONE_JERUSALEM);
-        KeyboardButton secondKeyboardButton = new KeyboardButton(Commands.TIMEZONE_SAINT_PETERSBURG);
-        keyboardRow.add(firstKeyboardButton);
-        keyboardRow.add(secondKeyboardButton);
+        keyboardRow.add(jerusalemButton);
+        keyboardRow.add(saintPetersburgButton);
         timezoneKeyboard.setKeyboard(Collections.singletonList(keyboardRow));
         return timezoneKeyboard;
     }
@@ -114,47 +150,51 @@ public class ApplicationConfig {
         return new ReplyKeyboardRemove();
     }
 
+    // <-----------Commands---------------->
+
     @Bean
     @Lazy
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper;
+    public Command<SendMessage> zenitTimezoneCommand() {
+        return new TimezoneCommand(zenitTimezoneKeyboard());
     }
 
     @Bean
     @Lazy
-    public Command<SendMessage> zenitCommand() {
-        return new ZenitCommand(timezoneKeyboard());
+    public Command<SendMessage> leagueTimezoneCommand() {
+        return new TimezoneCommand(leagueTimezoneKeyboard());
     }
 
     @Bean(initMethod = "init")
     @Lazy
     @ConfigurationProperties(prefix = "jerusalem")
-    public Command<SendMessage> zenitTimezoneJerusalemCommand() {
-        return new ZenitTimezoneCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
+    public Command<SendMessage> zenitJerusalemCommand() {
+        return new ZenitCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
     }
 
     @Bean(initMethod = "init")
     @Lazy
     @ConfigurationProperties(prefix = "moscow")
-    public Command<SendMessage> zenitTimezoneMoscowCommand() {
-        return new ZenitTimezoneCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
+    public Command<SendMessage> zenitSaintPetersburgCommand() {
+        return new ZenitCommand(resourceProperties(), removeKeyboard(), apiRequestFixture(), objectMapper());
     }
 
     @Bean
     @Lazy
     @ConfigurationProperties(prefix = "jerusalem")
-    public Command<SendPhoto> leagueStandingCommand() {
+    public Command<SendPhoto> leagueStandingJerusalemCommand() {
         return new LeagueStandingCommand(resourceProperties(), removeKeyboard(),
                 apiRequestFixture(), apiRequestImage(), objectMapper());
     }
 
     @Bean
     @Lazy
-    public ZenitCache zenitCache() {
-        return new ZenitCache(15);
+    @ConfigurationProperties(prefix = "moscow")
+    public Command<SendPhoto> leagueStandingSaintPetersburgCommand() {
+        return new LeagueStandingCommand(resourceProperties(), removeKeyboard(),
+                apiRequestFixture(), apiRequestImage(), objectMapper());
     }
+
+    // <-----------Requests---------------->
 
     @Bean
     @Lazy
@@ -170,4 +210,20 @@ public class ApplicationConfig {
         return new ApiRequestImage();
     }
 
+    // <-----------Other---------------->
+
+    @Bean
+    @Lazy
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return mapper;
+    }
+
+    @Bean
+    @Lazy
+    @ConfigurationProperties(prefix = "resource")
+    public ResourceProperties resourceProperties() {
+        return new ResourceProperties();
+    }
 }

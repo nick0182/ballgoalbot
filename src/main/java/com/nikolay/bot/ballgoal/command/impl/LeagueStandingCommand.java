@@ -3,6 +3,7 @@ package com.nikolay.bot.ballgoal.command.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.command.Command;
+import com.nikolay.bot.ballgoal.constants.Formatter;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
 import com.nikolay.bot.ballgoal.json.table.ResultTable;
@@ -13,9 +14,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class LeagueStandingCommand implements Command<SendPhoto> {
@@ -30,11 +31,11 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
 
     private ObjectMapper objectMapper;
 
-    private CommandData data = new CommandData();
-
     private SendPhoto cachedResult;
 
     private ZoneId zoneId;
+
+    private TreeSet<ZonedDateTime> refreshDates = new TreeSet<>();
 
     public LeagueStandingCommand(ResourceProperties resourceProperties,
                                  ReplyKeyboard keyboard,
@@ -52,14 +53,14 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
     public SendPhoto getResult() {
         ZonedDateTime refreshDate;
         try {
-            refreshDate = data.fetchNextRefreshDate();
+            refreshDate = refreshDates.first();
         } catch (NoSuchElementException ex) {
-            data.setupNewRefreshDates();
+            setupNewRefreshDates();
             return fetchNewResult();
         }
         ZonedDateTime now = ZonedDateTime.now(zoneId);
         if (now.compareTo(refreshDate) > 0) {
-            data.removeRefreshDate(refreshDate);
+            refreshDates.remove(refreshDate);
             return fetchNewResult();
         } else {
             return cachedResult;
@@ -80,54 +81,49 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
         SendPhoto result = new SendPhoto();
         result.setReplyMarkup(keyboard);
         result.setPhoto(url);
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
+        result.setCaption("As of " + now.format(Formatter.DATE_FORMATTER) + " "
+                + now.format(Formatter.TIME_FORMATTER));
         return (cachedResult = result);
+    }
+
+    private void setupNewRefreshDates() {
+        try {
+            String round = fetchRound();
+            String resource = appendRoundToResource(resourceProperties.getApiResourceLeagueRoundDates(), round);
+            String json = apiRequestFixture.call(resource, zoneId);
+            ResultFixture fixtureResult = objectMapper.readValue(json, ResultFixture.class);
+            List<Fixture> fixtures = fixtureResult.getApi().getFixtures();
+            ZonedDateTime now = ZonedDateTime.now(zoneId);
+            Collection<ZonedDateTime> dates= fixtures.stream()
+                    .map(Fixture::getEventDate)
+                    .filter(eventDate -> eventDate.compareTo(now) > 0)
+                    .collect(Collectors
+                            .groupingBy(ZonedDateTime::getDayOfMonth, Collectors
+                                    .reducing(now, date -> date.plusMinutes(130), BinaryOperator
+                                            .maxBy(Comparator
+                                                    .comparing(Function.identity())))))
+                    .values();
+            assert !dates.isEmpty();
+            refreshDates = new TreeSet<>(dates);
+        } catch (IOException e) {
+            throw new RuntimeException("Problem occurred while obtaining round dates", e);
+        }
+    }
+
+    private String fetchRound() throws IOException {
+        String json = apiRequestFixture.call(resourceProperties.getApiResourceLeagueFixture(), zoneId);
+        ResultFixture fixtureResult = objectMapper.readValue(json, ResultFixture.class);
+        return fixtureResult.getApi().getFixtures().get(0).getRound();
+    }
+
+    private String appendRoundToResource(String resource, String round) {
+        String preparedRoundString = round.replace(" ", "_");
+        return resource + preparedRoundString;
     }
 
     public void setZoneId(String zoneId) {
         this.zoneId = ZoneId.of(zoneId);
     }
 
-    // FIXME: retrieve field to parent class, no need for inner class as parent class is able to modify the field directly anyway
-    private class CommandData {
-
-        private TreeSet<ZonedDateTime> refreshDates = new TreeSet<>();
-
-        private ZonedDateTime fetchNextRefreshDate() {
-            return refreshDates.first();
-        }
-
-        private void removeRefreshDate(ZonedDateTime date) {
-            refreshDates.remove(date);
-        }
-
-        private void setupNewRefreshDates() {
-            try {
-                String round = fetchRound();
-                String resource = appendRoundToResource(resourceProperties.getApiResourceLeagueRoundDates(), round);
-                String json = apiRequestFixture.call(resource, zoneId);
-                ResultFixture fixtureResult = objectMapper.readValue(json, ResultFixture.class);
-                ZonedDateTime now = ZonedDateTime.now(zoneId);
-                List<Fixture> fixtures = fixtureResult.getApi().getFixtures();
-                refreshDates = fixtures.stream()
-                        .map(Fixture::getEventDate)
-                        .map(event -> event.plusMinutes(115))
-                        .filter(eventDate -> eventDate.compareTo(now) > 0)
-                        .collect(Collectors.toCollection(TreeSet::new));
-                assert !refreshDates.isEmpty();
-            } catch (IOException e) {
-                throw new RuntimeException("Problem occurred while obtaining round dates", e);
-            }
-        }
-
-        private String fetchRound() throws IOException {
-            String json = apiRequestFixture.call(resourceProperties.getApiResourceLeagueFixture(), zoneId);
-            ResultFixture fixtureResult = objectMapper.readValue(json, ResultFixture.class);
-            return fixtureResult.getApi().getFixtures().get(0).getRound();
-        }
-
-        private String appendRoundToResource(String resource, String round) {
-            String preparedRoundString = round.replace(" ", "_");
-            return resource + preparedRoundString;
-        }
-    }
 }

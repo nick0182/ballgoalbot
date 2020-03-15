@@ -15,7 +15,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 // TODO: add Lombok
-// TODO: try to go to Java 11
+// TODO: add Spring Integration flow
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private String name;
@@ -35,14 +35,20 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                 case Commands.ZENIT:
                     executeMessage(getZenitCommand(), chatId);
                     break;
-                case Commands.TIMEZONE_JERUSALEM:
-                    executeMessage(getZenitTimezoneJerusalemCommand(), chatId);
+                case Commands.ZENIT_JERUSALEM:
+                    executeMessage(getZenitJerusalemCommand(), chatId);
                     break;
-                case Commands.TIMEZONE_SAINT_PETERSBURG:
-                    executeMessage(getZenitTimezoneMoscowCommand(), chatId);
+                case Commands.ZENIT_SAINT_PETERSBURG:
+                    executeMessage(getZenitSaintPetersburgCommand(), chatId);
                     break;
                 case Commands.LEAGUE_STANDING:
-                    executePhoto(getLeagueStandingCommand(), chatId);
+                    executeMessage(getLeagueStandingCommand(), chatId);
+                    break;
+                case Commands.LEAGUE_STANDING_JERUSALEM:
+                    executePhoto(getLeagueStandingJerusalemCommand(), chatId);
+                    break;
+                case Commands.LEAGUE_STANDING_SAINT_PETERSBURG:
+                    executePhoto(getLeagueStandingSaintPetersburgCommand(), chatId);
                     break;
             }
         } catch (TelegramApiException e) {
@@ -95,10 +101,14 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     protected abstract Command<SendMessage> getZenitCommand();
 
-    protected abstract Command<SendMessage> getZenitTimezoneJerusalemCommand();
+    protected abstract Command<SendMessage> getZenitJerusalemCommand();
 
-    protected abstract Command<SendMessage> getZenitTimezoneMoscowCommand();
+    protected abstract Command<SendMessage> getZenitSaintPetersburgCommand();
 
-    protected abstract Command<SendPhoto> getLeagueStandingCommand();
+    protected abstract Command<SendMessage> getLeagueStandingCommand();
+
+    protected abstract Command<SendPhoto> getLeagueStandingJerusalemCommand();
+
+    protected abstract Command<SendPhoto> getLeagueStandingSaintPetersburgCommand();
 
 }

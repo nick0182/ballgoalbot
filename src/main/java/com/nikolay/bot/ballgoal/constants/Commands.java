@@ -8,13 +8,19 @@ public class Commands {
     // info about FC Zenit next match
     public static final String ZENIT = "/zenit";
 
-    // setup match time in Jerusalem timezone
-    public static final String TIMEZONE_JERUSALEM = "GMT +2.00 (Jerusalem)";
+    // match time in Jerusalem timezone
+    public static final String ZENIT_JERUSALEM = "GMT +2.00 (Jerusalem)";
 
-    // setup match time in Saint-Petersburg timezone
-    public static final String TIMEZONE_SAINT_PETERSBURG = "GMT +3.00 (Saint-Petersburg)";
+    // match time in Saint-Petersburg timezone
+    public static final String ZENIT_SAINT_PETERSBURG = "GMT +3.00 (Saint-Petersburg)";
 
     // get russian premier league table
     public static final String LEAGUE_STANDING = "/standing";
+
+    // league table in Jerusalem timezone
+    public static final String LEAGUE_STANDING_JERUSALEM = "GMT +2.00 Jerusalem";
+
+    // league table in Saint-Petersburg timezone
+    public static final String LEAGUE_STANDING_SAINT_PETERSBURG = "GMT +3.00 Saint-Petersburg";
 
 }
