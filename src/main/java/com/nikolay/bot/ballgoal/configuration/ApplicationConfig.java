@@ -8,7 +8,7 @@ import com.nikolay.bot.ballgoal.api.impl.ApiRequestImage;
 import com.nikolay.bot.ballgoal.bot.BallGoalBot;
 import com.nikolay.bot.ballgoal.command.Command;
 import com.nikolay.bot.ballgoal.command.impl.LeagueStandingCommand;
-import com.nikolay.bot.ballgoal.command.impl.TimezoneCommand;
+import com.nikolay.bot.ballgoal.command.impl.SimpleTextCommand;
 import com.nikolay.bot.ballgoal.command.impl.ZenitCommand;
 import com.nikolay.bot.ballgoal.constants.Commands;
 import com.nikolay.bot.ballgoal.properties.ResourceProperties;
@@ -62,9 +62,15 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "bot")
     public TelegramLongPollingBot ballGoalBot() {
         return new BallGoalBot() {
+
             @Override
-            protected Command<SendMessage> getZenitCommand() {
-                return zenitTimezoneCommand();
+            protected Command<SendMessage> getInfoCommand() {
+                return infoCommand();
+            }
+
+            @Override
+            protected Command<SendMessage> getTimezoneCommand() {
+                return timezoneCommand();
             }
 
             @Override
@@ -73,23 +79,13 @@ public class ApplicationConfig {
             }
 
             @Override
-            public Command<SendMessage> getZenitSaintPetersburgCommand() {
+            protected Command<SendMessage> getZenitSaintPetersburgCommand() {
                 return zenitSaintPetersburgCommand();
             }
 
             @Override
-            protected Command<SendMessage> getLeagueStandingCommand() {
-                return leagueTimezoneCommand();
-            }
-
-            @Override
-            protected Command<SendPhoto> getLeagueStandingJerusalemCommand() {
-                return leagueStandingJerusalemCommand();
-            }
-
-            @Override
-            protected Command<SendPhoto> getLeagueStandingSaintPetersburgCommand() {
-                return leagueStandingSaintPetersburgCommand();
+            protected Command<SendPhoto> getLeagueStandingCommand() {
+                return leagueStandingCommand();
             }
         };
     }
@@ -98,48 +94,14 @@ public class ApplicationConfig {
 
     @Bean
     @Lazy
-    public KeyboardButton zenitJerusalemButton() {
-        return new KeyboardButton(Commands.ZENIT_JERUSALEM);
-    }
-
-    @Bean
-    @Lazy
-    public KeyboardButton zenitSaintPetersburgButton() {
-        return new KeyboardButton(Commands.ZENIT_SAINT_PETERSBURG);
-    }
-
-    @Bean
-    @Lazy
-    public KeyboardButton leagueJerusalemButton() {
-        return new KeyboardButton(Commands.LEAGUE_STANDING_JERUSALEM);
-    }
-
-    @Bean
-    @Lazy
-    public KeyboardButton leagueSaintPetersburgButton() {
-        return new KeyboardButton(Commands.LEAGUE_STANDING_SAINT_PETERSBURG);
-    }
-
-    @Bean
-    @Lazy
-    public ReplyKeyboard zenitTimezoneKeyboard() {
-        return createKeyboard(zenitJerusalemButton(), zenitSaintPetersburgButton());
-    }
-
-    @Bean
-    @Lazy
-    public ReplyKeyboard leagueTimezoneKeyboard() {
-        return createKeyboard(leagueJerusalemButton(), leagueSaintPetersburgButton());
-    }
-
-    private ReplyKeyboard createKeyboard(KeyboardButton jerusalemButton, KeyboardButton saintPetersburgButton) {
+    public ReplyKeyboard timezoneKeyboard() {
         ReplyKeyboardMarkup timezoneKeyboard = new ReplyKeyboardMarkup();
         timezoneKeyboard.setOneTimeKeyboard(true);
         timezoneKeyboard.setSelective(true);
         timezoneKeyboard.setResizeKeyboard(true);
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add(jerusalemButton);
-        keyboardRow.add(saintPetersburgButton);
+        keyboardRow.add(new KeyboardButton(Commands.ZENIT_JERUSALEM));
+        keyboardRow.add(new KeyboardButton(Commands.ZENIT_SAINT_PETERSBURG));
         timezoneKeyboard.setKeyboard(Collections.singletonList(keyboardRow));
         return timezoneKeyboard;
     }
@@ -154,14 +116,16 @@ public class ApplicationConfig {
 
     @Bean
     @Lazy
-    public Command<SendMessage> zenitTimezoneCommand() {
-        return new TimezoneCommand(zenitTimezoneKeyboard());
+    @ConfigurationProperties(prefix = "info")
+    public Command<SendMessage> infoCommand() {
+        return new SimpleTextCommand(removeKeyboard());
     }
 
     @Bean
     @Lazy
-    public Command<SendMessage> leagueTimezoneCommand() {
-        return new TimezoneCommand(leagueTimezoneKeyboard());
+    @ConfigurationProperties(prefix = "timezone")
+    public Command<SendMessage> timezoneCommand() {
+        return new SimpleTextCommand(timezoneKeyboard());
     }
 
     @Bean(initMethod = "init")
@@ -180,16 +144,7 @@ public class ApplicationConfig {
 
     @Bean
     @Lazy
-    @ConfigurationProperties(prefix = "jerusalem")
-    public Command<SendPhoto> leagueStandingJerusalemCommand() {
-        return new LeagueStandingCommand(resourceProperties(), removeKeyboard(),
-                apiRequestFixture(), apiRequestImage(), objectMapper());
-    }
-
-    @Bean
-    @Lazy
-    @ConfigurationProperties(prefix = "moscow")
-    public Command<SendPhoto> leagueStandingSaintPetersburgCommand() {
+    public Command<SendPhoto> leagueStandingCommand() {
         return new LeagueStandingCommand(resourceProperties(), removeKeyboard(),
                 apiRequestFixture(), apiRequestImage(), objectMapper());
     }

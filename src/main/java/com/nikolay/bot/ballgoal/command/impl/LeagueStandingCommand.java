@@ -3,7 +3,6 @@ package com.nikolay.bot.ballgoal.command.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.command.Command;
-import com.nikolay.bot.ballgoal.constants.Formatter;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
 import com.nikolay.bot.ballgoal.json.table.ResultTable;
@@ -33,9 +32,9 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
 
     private SendPhoto cachedResult;
 
-    private ZoneId zoneId;
-
     private TreeSet<ZonedDateTime> refreshDates = new TreeSet<>();
+
+    private ZoneId zoneId = ZoneId.of("Europe/London");
 
     public LeagueStandingCommand(ResourceProperties resourceProperties,
                                  ReplyKeyboard keyboard,
@@ -81,9 +80,6 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
         SendPhoto result = new SendPhoto();
         result.setReplyMarkup(keyboard);
         result.setPhoto(url);
-        ZonedDateTime now = ZonedDateTime.now(zoneId);
-        result.setCaption("As of " + now.format(Formatter.DATE_FORMATTER) + " "
-                + now.format(Formatter.TIME_FORMATTER));
         return (cachedResult = result);
     }
 
@@ -120,10 +116,6 @@ public class LeagueStandingCommand implements Command<SendPhoto> {
     private String appendRoundToResource(String resource, String round) {
         String preparedRoundString = round.replace(" ", "_");
         return resource + preparedRoundString;
-    }
-
-    public void setZoneId(String zoneId) {
-        this.zoneId = ZoneId.of(zoneId);
     }
 
 }

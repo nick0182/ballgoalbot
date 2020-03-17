@@ -5,6 +5,9 @@ public class Commands {
     // prevent initialization
     private Commands() {}
 
+    // info about available commands
+    public static final String INFO = "/info";
+
     // info about FC Zenit next match
     public static final String ZENIT = "/zenit";
 
@@ -16,11 +19,4 @@ public class Commands {
 
     // get russian premier league table
     public static final String LEAGUE_STANDING = "/standing";
-
-    // league table in Jerusalem timezone
-    public static final String LEAGUE_STANDING_JERUSALEM = "GMT +2.00 Jerusalem";
-
-    // league table in Saint-Petersburg timezone
-    public static final String LEAGUE_STANDING_SAINT_PETERSBURG = "GMT +3.00 Saint-Petersburg";
-
 }

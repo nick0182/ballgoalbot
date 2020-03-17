@@ -32,8 +32,11 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         long chatId = message.getChatId();
         try {
             switch (command) {
+                case Commands.INFO:
+                    executeMessage(getInfoCommand(), chatId);
+                    break;
                 case Commands.ZENIT:
-                    executeMessage(getZenitCommand(), chatId);
+                    executeMessage(getTimezoneCommand(), chatId);
                     break;
                 case Commands.ZENIT_JERUSALEM:
                     executeMessage(getZenitJerusalemCommand(), chatId);
@@ -42,13 +45,7 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                     executeMessage(getZenitSaintPetersburgCommand(), chatId);
                     break;
                 case Commands.LEAGUE_STANDING:
-                    executeMessage(getLeagueStandingCommand(), chatId);
-                    break;
-                case Commands.LEAGUE_STANDING_JERUSALEM:
-                    executePhoto(getLeagueStandingJerusalemCommand(), chatId);
-                    break;
-                case Commands.LEAGUE_STANDING_SAINT_PETERSBURG:
-                    executePhoto(getLeagueStandingSaintPetersburgCommand(), chatId);
+                    executePhoto(getLeagueStandingCommand(), chatId);
                     break;
             }
         } catch (TelegramApiException e) {
@@ -99,16 +96,13 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         return token;
     }
 
-    protected abstract Command<SendMessage> getZenitCommand();
+    protected abstract Command<SendMessage> getInfoCommand();
+
+    protected abstract Command<SendMessage> getTimezoneCommand();
 
     protected abstract Command<SendMessage> getZenitJerusalemCommand();
 
     protected abstract Command<SendMessage> getZenitSaintPetersburgCommand();
 
-    protected abstract Command<SendMessage> getLeagueStandingCommand();
-
-    protected abstract Command<SendPhoto> getLeagueStandingJerusalemCommand();
-
-    protected abstract Command<SendPhoto> getLeagueStandingSaintPetersburgCommand();
-
+    protected abstract Command<SendPhoto> getLeagueStandingCommand();
 }
