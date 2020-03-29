@@ -2,34 +2,36 @@ package com.nikolay.bot.ballgoal.api.impl;
 
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import okhttp3.*;
+import org.springframework.core.env.Environment;
 
 import java.io.IOException;
 import java.net.URL;
-import java.time.ZoneId;
 import java.util.Objects;
 
 public class ApiRequestImage implements ApiRequest {
 
-    private String host;
+    private final Environment env;
 
-    private String userId;
+    private final String imageResource;
 
-    private String key;
-
-    private HttpUrl resourceTablesWidget;
+    public ApiRequestImage(Environment env, String imageResource) {
+        this.env = env;
+        this.imageResource = imageResource;
+    }
 
     @Override
-    public String call(String resource, ZoneId zoneId) throws IOException {
-        resourceTablesWidget = resourceTablesWidget.newBuilder()
-                .addEncodedQueryParameter("timezone", zoneId.getId())
-                .build();
+    public String call(String resource) throws IOException {
+        String host = Objects.requireNonNull(env.getProperty("API_IMAGE_HOST"));
+        String user = Objects.requireNonNull(env.getProperty("API_IMAGE_USER"));
+        String key = Objects.requireNonNull(env.getProperty("API_IMAGE_KEY"));
+
         OkHttpClient client = new OkHttpClient();
         URL url = new URL("https", host, resource);
-        String credential = Credentials.basic(userId, key);
+        String credential = Credentials.basic(user, key);
         RequestBody body = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("html", "<h1>table_image</>")
-                .addFormDataPart("url", resourceTablesWidget.toString())
+                .addFormDataPart("url", imageResource)
                 .build();
         Request request = new Request.Builder()
                 .url(url)
@@ -44,21 +46,5 @@ public class ApiRequestImage implements ApiRequest {
         } else {
             throw new IllegalArgumentException("resource not found");
         }
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public void setResourceTablesWidget(String resourceTablesWidget) {
-        this.resourceTablesWidget = HttpUrl.get(resourceTablesWidget);
     }
 }

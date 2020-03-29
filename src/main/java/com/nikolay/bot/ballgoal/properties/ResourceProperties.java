@@ -6,13 +6,15 @@ public class ResourceProperties {
 
     private String resourceHtmlToImage;
 
-    private String apiResourceLeagueFixture;
+    private String apiResourceNextLeagueFixture;
 
     private String apiResourceLeagueRoundDates;
 
     private String apiResourceFixture;
 
     private String apiResourceFixturesInPlay;
+
+    private String apiResourceLeagueFixturesInPlay;
 
     private int teamId;
 
@@ -24,8 +26,8 @@ public class ResourceProperties {
         return resourceHtmlToImage;
     }
 
-    public String getApiResourceLeagueFixture() {
-        return apiResourceLeagueFixture;
+    public String getApiResourceNextLeagueFixture() {
+        return apiResourceNextLeagueFixture;
     }
 
     public String getApiResourceLeagueRoundDates() {
@@ -40,6 +42,10 @@ public class ResourceProperties {
         return apiResourceFixturesInPlay;
     }
 
+    public String getApiResourceLeagueFixturesInPlay() {
+        return apiResourceLeagueFixturesInPlay;
+    }
+
     public int getTeamId() {
         return teamId;
     }
@@ -52,8 +58,8 @@ public class ResourceProperties {
         this.resourceHtmlToImage = resourceHtmlToImage;
     }
 
-    public void setApiResourceLeagueFixture(String apiResourceLeagueFixture) {
-        this.apiResourceLeagueFixture = apiResourceLeagueFixture;
+    public void setApiResourceNextLeagueFixture(String apiResourceNextLeagueFixture) {
+        this.apiResourceNextLeagueFixture = apiResourceNextLeagueFixture;
     }
 
     public void setApiResourceLeagueRoundDates(String apiResourceLeagueRoundDates) {
@@ -66,6 +72,10 @@ public class ResourceProperties {
 
     public void setApiResourceFixturesInPlay(String apiResourceFixturesInPlay) {
         this.apiResourceFixturesInPlay = apiResourceFixturesInPlay;
+    }
+
+    public void setApiResourceLeagueFixturesInPlay(String apiResourceLeagueFixturesInPlay) {
+        this.apiResourceLeagueFixturesInPlay = apiResourceLeagueFixturesInPlay;
     }
 
     public void setTeamId(int teamId) {

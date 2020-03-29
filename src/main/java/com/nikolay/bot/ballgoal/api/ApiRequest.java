@@ -5,6 +5,6 @@ import java.time.ZoneId;
 
 public interface ApiRequest {
 
-    String call(String resource, ZoneId zoneId) throws IOException;
+    String call(String resource) throws IOException;
 
 }

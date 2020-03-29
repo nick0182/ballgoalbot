@@ -1,0 +1,139 @@
+offset:
+  saint-petersburg: "+03:00"
+  jerusalem: "+03:00"
+
+resource:
+  teamId: 596 # FC Zenit
+  leagueId: 511 # Russian Premiere League 19/20
+  apiResourceNextFixture: "/v2/fixtures/team/${resource.teamId}/next/1"
+  apiResourceFixture: "/v2/fixtures/id/"
+  apiResourceNextLeagueFixture: "/v2/fixtures/league/${resource.leagueId}/next/1"
+  apiResourceLeagueRoundDates: "/v2/fixtures/league/${resource.leagueId}/"
+  apiResourceFixturesInPlay: "/v2/fixtures/live"
+  apiResourceLeagueFixturesInPlay: "/v2/fixtures/live/${resource.leagueId}"
+  resourceHtmlToImage: "/v1/image"
+
+api:
+  image:
+    resource:
+      "https://www.fctables.com/\
+      russia/\
+      premier-league/\
+      iframe/\
+      ?type=table\
+      &lang_id=2\
+      &country=179\
+      &template=25\
+      &team=197711\
+      &time=24\
+      &po=1\
+      &ma=1\
+      &wi=1\
+      &dr=1\
+      &los=1\
+      &gf=1\
+      &ga=1\
+      &gd=1\
+      &pts=1\
+      &ng=0\
+      &form=0\
+      &width=1366\
+      &height=768\
+      &font=Helvetica\
+      &fs=15\
+      &lh=34\
+      &bg=FFFFFF\
+      &fc=333333\
+      &logo=0\
+      &tlink=0\
+      &ths=1\
+      &thb=1\
+      &thba=FFFFFF\
+      &thc=000000\
+      &bc=dddddd\
+      &hob=f5f5f5\
+      &hobc=ebe7e7\
+      &lc=333333\
+      &sh=1\
+      &hfb=1\
+      &hbc=3bafda\
+      &hfc=FFFFFF\
+      &timezone=Europe/London"
+
+text:
+  timezone: "Choose your timezone"
+  info: >
+    /info - see all available commands
+    /zenit - info about FC Zenit next match. It shows who plays home and away, status and time. If a match is in play, it shows current score and minute (updated every 2 minutes)
+    /standing - Russian premier league table. Updated after the last game of every match-day (i.e if there are 3 games this day, the table will be refreshed after the last game will be finished)
+
+command:
+  info: "/info"
+  zenit: "/zenit"
+  timezone:
+    jerusalem: "GMT +3.00 (Jerusalem)"
+    saintPetersburg: "GMT +3.00 (Saint-Petersburg)"
+  league: "/standing"
+
+---
+
+spring:
+  profiles: by
+
+resource:
+  teamId: 751 # FC Slavia Mozyr
+  leagueId: 511 # Belarus Vysshaya Liga 20
+
+api:
+  image:
+    resource:
+      "https://www.fctables.com/\
+      belarus/\
+      premier-division/\
+      iframe/\
+      ?type=table\
+      &lang_id=2\
+      &country=20\
+      &template=178\
+      &team=194166\
+      &timezone=Asia/Jerusalem\
+      &time=24\
+      &po=1\
+      &ma=1\
+      &wi=1\
+      &dr=1\
+      &los=1\
+      &gf=1\
+      &ga=1\
+      &gd=1\
+      &pts=1\
+      &ng=0\
+      &form=0\
+      &width=1366\
+      &height=700\
+      &font=Helvetica\
+      &fs=15\
+      &lh=34\
+      &bg=FFFFFF\
+      &fc=333333\
+      &logo=0\
+      &tlink=0\
+      &ths=1\
+      &thb=1\
+      &thba=FFFFFF\
+      &thc=000000\
+      &bc=dddddd\
+      &hob=f5f5f5\
+      &hobc=ebe7e7\
+      &lc=333333\
+      &sh=1\
+      &hfb=1\
+      &hbc=3bafda\
+      &hfc=FFFFFF\
+      &timezone=Europe/London"
+
+text:
+  info: |
+    /info - see all available commands
+    /zenit - info about FC Slavia Mozyr next match. It shows who plays home and away, status and time. If a match is in play, it shows current score and minute (updated every 2 minutes)
+    /standing - Belarus Vysshaya Liga table. Updated after the last game of every match-day (i.e if there are 3 games this day, the table will be refreshed after the last game will be finished)

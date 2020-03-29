@@ -2,12 +2,12 @@ package com.nikolay.bot.ballgoal.json.fixture;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 public class Fixture {
 
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    private ZonedDateTime event_date;
+    private LocalDateTime event_date;
 
     private int fixture_id;
 
@@ -25,10 +25,6 @@ public class Fixture {
 
     private int elapsed;
 
-    public int getFixture_id() {
-        return fixture_id;
-    }
-
     public int getGoalsHomeTeam() {
         return goalsHomeTeam;
     }
@@ -45,7 +41,7 @@ public class Fixture {
         return awayTeam;
     }
 
-    public ZonedDateTime getEventDate() {
+    public LocalDateTime getEventDate() {
         return event_date;
     }
 
@@ -60,4 +56,5 @@ public class Fixture {
     public int getElapsed() {
         return elapsed;
     }
+
 }

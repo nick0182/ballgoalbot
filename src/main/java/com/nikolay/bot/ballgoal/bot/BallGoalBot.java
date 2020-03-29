@@ -1,9 +1,8 @@
 package com.nikolay.bot.ballgoal.bot;
 
-import com.nikolay.bot.ballgoal.command.Command;
-import com.nikolay.bot.ballgoal.constants.Commands;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.nikolay.bot.ballgoal.cache.updater.CacheUpdater;
+import com.nikolay.bot.ballgoal.cache.updater.LeagueCacheUpdater;
+import org.springframework.core.env.Environment;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -13,62 +12,74 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Objects;
 
-// TODO: add Lombok
-// TODO: add Spring Integration flow
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
-    private String name;
+    private final Environment env;
 
-    private String token;
+    private final CacheUpdater zenitCacheUpdater;
 
-    private static final Logger LOG = LoggerFactory.getLogger(BallGoalBot.class);
+    private final LeagueCacheUpdater leagueCacheUpdater;
 
-    //TODO: test it only with Spring context (Integration test)
+    public BallGoalBot(Environment env, CacheUpdater zenitCacheUpdater, LeagueCacheUpdater leagueCacheUpdater) {
+        this.env = env;
+        this.zenitCacheUpdater = zenitCacheUpdater;
+        this.leagueCacheUpdater = leagueCacheUpdater;
+    }
+
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
         String command = message.getText();
-        LOG.debug("Command received: {}", command);
         long chatId = message.getChatId();
         try {
-            switch (command) {
-                case Commands.INFO:
-                    executeMessage(getInfoCommand(), chatId);
-                    break;
-                case Commands.ZENIT:
-                    executeMessage(getTimezoneCommand(), chatId);
-                    break;
-                case Commands.ZENIT_JERUSALEM:
-                    executeMessage(getZenitJerusalemCommand(), chatId);
-                    break;
-                case Commands.ZENIT_SAINT_PETERSBURG:
-                    executeMessage(getZenitSaintPetersburgCommand(), chatId);
-                    break;
-                case Commands.LEAGUE_STANDING:
-                    executePhoto(getLeagueStandingCommand(), chatId);
-                    break;
+            if (command.equals(getCommandInfo())) {
+                executeResult(getInfoMessage(), chatId);
+            } else if (command.equals(getCommandZenit())) {
+                executeResult(getZenitMessage(), chatId);
+            } else if (command.equals(getCommandZenitJerusalem())) {
+                zenitCacheUpdater.updateCache();
+                executeResult(getJerusalemMessage(), chatId);
+            } else if (command.equals(getCommandZenitSaintPetersburg())) {
+                zenitCacheUpdater.updateCache();
+                executeResult(getSaintPetersburgMessage(), chatId);
+            } else if (command.equals(getCommandLeague())) {
+                leagueCacheUpdater.updateCache();
+                executeResult(getLeaguePhoto(), chatId);
             }
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
 
-    private void executeMessage(Command<SendMessage> command, long chatId) throws TelegramApiException {
-        SendMessage messageResult = command.getResult();
-        messageResult.setChatId(chatId);
-        execute(messageResult);
+    private void executeResult(SendMessage message, long chatId) throws TelegramApiException {
+        if (message.getText() != null) {
+            message.setChatId(chatId);
+            execute(message);
+        } else {
+            executeTryAgainResult(chatId);
+        }
     }
 
-    private void executePhoto(Command<SendPhoto> command, long chatId) throws TelegramApiException {
-        SendPhoto photoResult = command.getResult();
-        photoResult.setChatId(chatId);
-        boolean isNewPhoto = isPhotoIdURL(photoResult.getPhoto().getAttachName());
-        if (isNewPhoto) {
-            Message file = execute(photoResult);
-            photoResult.setPhoto(file.getPhoto().get(0).getFileId());
+    private void executeResult(SendPhoto photo, long chatId) throws TelegramApiException {
+        if (photo.getPhoto().getAttachName() != null) {
+            photo.setChatId(chatId);
+            boolean isNewPhoto = isPhotoIdURL(photo.getPhoto().getAttachName());
+            if (isNewPhoto) {
+                Message file = execute(photo);
+                leagueCacheUpdater.setTelegramFileCache(file);
+            } else {
+                execute(photo);
+            }
         } else {
-            execute(photoResult);
+            executeTryAgainResult(chatId);
         }
+    }
+
+    private void executeTryAgainResult(long chatId) throws TelegramApiException {
+        SendMessage tryAgainMessage = getTryAgainMessage();
+        tryAgainMessage.setChatId(chatId);
+        execute(tryAgainMessage);
     }
 
     private boolean isPhotoIdURL(String photoId) {
@@ -80,29 +91,33 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         }
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
     public String getBotUsername() {
-        return name;
+        return Objects.requireNonNull(env.getProperty("BOT_NAME"));
     }
 
     public String getBotToken() {
-        return token;
+        return Objects.requireNonNull(env.getProperty("BOT_TOKEN"));
     }
 
-    protected abstract Command<SendMessage> getInfoCommand();
+    protected abstract String getCommandInfo();
 
-    protected abstract Command<SendMessage> getTimezoneCommand();
+    protected abstract String getCommandZenit();
 
-    protected abstract Command<SendMessage> getZenitJerusalemCommand();
+    protected abstract String getCommandZenitJerusalem();
 
-    protected abstract Command<SendMessage> getZenitSaintPetersburgCommand();
+    protected abstract String getCommandZenitSaintPetersburg();
 
-    protected abstract Command<SendPhoto> getLeagueStandingCommand();
+    protected abstract String getCommandLeague();
+
+    protected abstract SendMessage getInfoMessage();
+
+    protected abstract SendMessage getZenitMessage();
+
+    protected abstract SendMessage getJerusalemMessage();
+
+    protected abstract SendMessage getSaintPetersburgMessage();
+
+    protected abstract SendPhoto getLeaguePhoto();
+
+    protected abstract SendMessage getTryAgainMessage();
 }

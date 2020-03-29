@@ -5,25 +5,29 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.springframework.core.env.Environment;
 
 import java.io.IOException;
-import java.time.ZoneId;
 import java.util.Objects;
 
 public class ApiRequestFixture implements ApiRequest {
 
-    private String host;
+    private final Environment env;
 
-    private String key;
+    public ApiRequestFixture(Environment env) {
+        this.env = env;
+    }
 
     @Override
-    public String call(String resource, ZoneId zoneId) throws IOException {
+    public String call(String resource) throws IOException {
+        String host = Objects.requireNonNull(env.getProperty("API_FIXTURE_HOST"));
+        String key = Objects.requireNonNull(env.getProperty("API_FIXTURE_KEY"));
+
         OkHttpClient okHttpClient = new OkHttpClient();
         HttpUrl url = new HttpUrl.Builder()
                 .scheme("https")
                 .host(host)
                 .addPathSegments(resource)
-                .addQueryParameter("timezone", zoneId.getId())
                 .build();
         Request request = new Request.Builder()
                 .url(url)
@@ -38,13 +42,5 @@ public class ApiRequestFixture implements ApiRequest {
         } else {
             throw new IllegalArgumentException("resource not found");
         }
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 }
