@@ -1,7 +1,7 @@
 package com.nikolay.bot.ballgoal.bot;
 
-import com.nikolay.bot.ballgoal.cache.updater.CacheUpdater;
-import com.nikolay.bot.ballgoal.cache.updater.LeagueCacheUpdater;
+import com.nikolay.bot.ballgoal.cache.Cache;
+import com.nikolay.bot.ballgoal.constants.Commands;
 import org.springframework.core.env.Environment;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -18,14 +18,11 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private final Environment env;
 
-    private final CacheUpdater zenitCacheUpdater;
+    private final Cache<String> leagueCache;
 
-    private final LeagueCacheUpdater leagueCacheUpdater;
-
-    public BallGoalBot(Environment env, CacheUpdater zenitCacheUpdater, LeagueCacheUpdater leagueCacheUpdater) {
+    public BallGoalBot(Environment env, Cache<String> leagueCache) {
         this.env = env;
-        this.zenitCacheUpdater = zenitCacheUpdater;
-        this.leagueCacheUpdater = leagueCacheUpdater;
+        this.leagueCache = leagueCache;
     }
 
     public void onUpdateReceived(Update update) {
@@ -33,19 +30,22 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         String command = message.getText();
         long chatId = message.getChatId();
         try {
-            if (command.equals(getCommandInfo())) {
-                executeResult(getInfoMessage(), chatId);
-            } else if (command.equals(getCommandZenit())) {
-                executeResult(getZenitMessage(), chatId);
-            } else if (command.equals(getCommandZenitJerusalem())) {
-                zenitCacheUpdater.updateCache();
-                executeResult(getJerusalemMessage(), chatId);
-            } else if (command.equals(getCommandZenitSaintPetersburg())) {
-                zenitCacheUpdater.updateCache();
-                executeResult(getSaintPetersburgMessage(), chatId);
-            } else if (command.equals(getCommandLeague())) {
-                leagueCacheUpdater.updateCache();
-                executeResult(getLeaguePhoto(), chatId);
+            switch (command) {
+                case Commands.INFO:
+                    executeResult(getInfoMessage(), chatId);
+                    break;
+                case Commands.ZENIT:
+                    executeResult(getZenitMessage(), chatId);
+                    break;
+                case Commands.ZENIT_JERUSALEM:
+                    executeResult(getJerusalemMessage(), chatId);
+                    break;
+                case Commands.ZENIT_SAINT_PETERSBURG:
+                    executeResult(getSaintPetersburgMessage(), chatId);
+                    break;
+                case Commands.STANDING:
+                    executeResult(getLeaguePhoto(), chatId);
+                    break;
             }
         } catch (TelegramApiException e) {
             e.printStackTrace();
@@ -53,33 +53,17 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
     }
 
     private void executeResult(SendMessage message, long chatId) throws TelegramApiException {
-        if (message.getText() != null) {
-            message.setChatId(chatId);
-            execute(message);
-        } else {
-            executeTryAgainResult(chatId);
-        }
+        message.setChatId(chatId);
+        execute(message);
     }
 
     private void executeResult(SendPhoto photo, long chatId) throws TelegramApiException {
-        if (photo.getPhoto().getAttachName() != null) {
-            photo.setChatId(chatId);
-            boolean isNewPhoto = isPhotoIdURL(photo.getPhoto().getAttachName());
-            if (isNewPhoto) {
-                Message file = execute(photo);
-                leagueCacheUpdater.setTelegramFileCache(file);
-            } else {
-                execute(photo);
-            }
-        } else {
-            executeTryAgainResult(chatId);
+        boolean isNewPhoto = isPhotoIdURL(photo.getPhoto().getAttachName());
+        photo.setChatId(chatId);
+        Message file = execute(photo);
+        if (isNewPhoto) {
+            leagueCache.setCache(file.getPhoto().get(0).getFileId());
         }
-    }
-
-    private void executeTryAgainResult(long chatId) throws TelegramApiException {
-        SendMessage tryAgainMessage = getTryAgainMessage();
-        tryAgainMessage.setChatId(chatId);
-        execute(tryAgainMessage);
     }
 
     private boolean isPhotoIdURL(String photoId) {
@@ -99,16 +83,6 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         return Objects.requireNonNull(env.getProperty("BOT_TOKEN"));
     }
 
-    protected abstract String getCommandInfo();
-
-    protected abstract String getCommandZenit();
-
-    protected abstract String getCommandZenitJerusalem();
-
-    protected abstract String getCommandZenitSaintPetersburg();
-
-    protected abstract String getCommandLeague();
-
     protected abstract SendMessage getInfoMessage();
 
     protected abstract SendMessage getZenitMessage();
@@ -118,6 +92,4 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
     protected abstract SendMessage getSaintPetersburgMessage();
 
     protected abstract SendPhoto getLeaguePhoto();
-
-    protected abstract SendMessage getTryAgainMessage();
 }

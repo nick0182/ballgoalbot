@@ -21,13 +21,9 @@ public class LastMatchDayFixtureTransformer extends ApiTransformer<Fixture> {
     }
 
     @Override
-    public Fixture transform(Object source) {
-        try {
-            Fixture matchDayFixture = fetchLeagueFixtureInPlay().orElse(fetchNextLeagueFixture());
-            return fetchLastMatchDayFixture(matchDayFixture.getEventDate());
-        } catch (IOException e) {
-            throw wrapToRuntime(e);
-        }
+    protected Fixture transform() throws IOException {
+        Fixture matchDayFixture = fetchLeagueFixtureInPlay().orElse(fetchNextLeagueFixture());
+        return fetchLastMatchDayFixture(matchDayFixture.getEventDate());
     }
 
     private Optional<Fixture> fetchLeagueFixtureInPlay() throws IOException {

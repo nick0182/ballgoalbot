@@ -21,9 +21,16 @@ public abstract class ApiTransformer<T> implements GenericTransformer<Object, T>
         this.objectMapper = objectMapper;
     }
 
-    protected RuntimeException wrapToRuntime(Exception exception) {
-        return new RuntimeException("Cannot obtain info from api", exception.getCause());
+    @Override
+    public T transform(Object source) {
+        try {
+            return transform();
+        } catch (IOException e) {
+            throw new RuntimeException("error fetching result from api. Cache was not set");
+        }
     }
+
+    protected abstract T transform() throws IOException;
 
     protected <S> S callApi(String resource, Class<S> classToMap) throws IOException {
         String json = apiRequest.call(resource);

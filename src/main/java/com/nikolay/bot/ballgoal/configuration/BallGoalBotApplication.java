@@ -9,12 +9,9 @@ import com.nikolay.bot.ballgoal.bot.BallGoalBot;
 import com.nikolay.bot.ballgoal.cache.Cache;
 import com.nikolay.bot.ballgoal.cache.CacheHandler;
 import com.nikolay.bot.ballgoal.cache.ZenitTimeCache;
-import com.nikolay.bot.ballgoal.cache.timestamp.Timestamp;
-import com.nikolay.bot.ballgoal.cache.timestamp.TimestampHandler;
-import com.nikolay.bot.ballgoal.cache.updater.CacheUpdater;
-import com.nikolay.bot.ballgoal.cache.updater.LeagueCacheUpdater;
+import com.nikolay.bot.ballgoal.cache.trigger.TriggerHandler;
 import com.nikolay.bot.ballgoal.cache.utils.CacheOffsetAppender;
-import com.nikolay.bot.ballgoal.gateway.CacheGateway;
+import com.nikolay.bot.ballgoal.constants.Commands;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.json.table.ResultTable;
 import com.nikolay.bot.ballgoal.properties.ResourceProperties;
@@ -28,6 +25,7 @@ import com.nikolay.bot.ballgoal.transformer.timestamp.TimestampTransformer;
 import com.nikolay.bot.ballgoal.transformer.timestamp.impl.LeagueTimestampTransformer;
 import com.nikolay.bot.ballgoal.transformer.timestamp.impl.ZenitTimestampTransformer;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -37,12 +35,12 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
-import org.springframework.integration.channel.ExecutorChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
-import org.springframework.integration.gateway.GatewayProxyFactoryBean;
+import org.springframework.integration.dsl.PollerSpec;
+import org.springframework.integration.dsl.Pollers;
 import org.springframework.integration.transformer.GenericTransformer;
-import org.springframework.messaging.MessageChannel;
+import org.springframework.integration.util.DynamicPeriodicTrigger;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -55,10 +53,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Executors;
 
 @SpringBootApplication
@@ -70,29 +69,11 @@ public class BallGoalBotApplication {
     @Value("${text.timezone}")
     private String textTimezone;
 
-    @Value("${api.image.resource}")
-    private String imageResource;
-
-    @Value("${offset.saint-petersburg}")
-    private String saintPetersburg;
-
     @Value("${offset.jerusalem}")
     private String jerusalem;
 
-    @Value("${command.info}")
-    private String commandInfo;
-
-    @Value("${command.zenit}")
-    private String commandZenit;
-
-    @Value("${command.timezone.jerusalem}")
-    private String commandZenitJerusalem;
-
-    @Value("${command.timezone.saintPetersburg}")
-    private String commandZenitSaintPetersburg;
-
-    @Value("${command.league}")
-    private String commandLeague;
+    @Value("${offset.saint-petersburg}")
+    private String saintPetersburg;
 
     private final Environment env;
 
@@ -118,32 +99,7 @@ public class BallGoalBotApplication {
 
     @Bean
     public TelegramLongPollingBot ballGoalBot() {
-        return new BallGoalBot(env, zenitCacheUpdater(), leagueCacheUpdater()) {
-            @Override
-            protected String getCommandInfo() {
-                return commandInfo;
-            }
-
-            @Override
-            protected String getCommandZenit() {
-                return commandZenit;
-            }
-
-            @Override
-            protected String getCommandZenitJerusalem() {
-                return commandZenitJerusalem;
-            }
-
-            @Override
-            protected String getCommandZenitSaintPetersburg() {
-                return commandZenitSaintPetersburg;
-            }
-
-            @Override
-            protected String getCommandLeague() {
-                return commandLeague;
-            }
-
+        return new BallGoalBot(env, leagueCache()) {
             @Override
             protected SendMessage getInfoMessage() {
                 return infoMessage();
@@ -168,34 +124,12 @@ public class BallGoalBotApplication {
             protected SendPhoto getLeaguePhoto() {
                 return leaguePhoto();
             }
-
-            @Override
-            protected SendMessage getTryAgainMessage() {
-                return tryAgainMessage();
-            }
         };
-    }
-
-    // <-----------Gateways---------------->
-
-    @Bean
-    public GatewayProxyFactoryBean zenitCacheGateway() {
-        GatewayProxyFactoryBean gateway = new GatewayProxyFactoryBean(CacheGateway.class);
-        gateway.setDefaultRequestChannel(zenitExecutorChannel());
-        return gateway;
-    }
-
-    @Bean
-    public GatewayProxyFactoryBean leagueCacheGateway() {
-        GatewayProxyFactoryBean gateway = new GatewayProxyFactoryBean(CacheGateway.class);
-        gateway.setDefaultRequestChannel(leagueExecutorChannel());
-        return gateway;
     }
 
     // <-----------Responses---------------->
 
     @Bean
-    @Scope("prototype")
     public SendMessage infoMessage() {
         SendMessage message = new SendMessage();
         message.setReplyMarkup(removeKeyboard());
@@ -204,7 +138,6 @@ public class BallGoalBotApplication {
     }
 
     @Bean
-    @Scope("prototype")
     public SendMessage zenitMessage() {
         SendMessage message = new SendMessage();
         message.setReplyMarkup(timezoneKeyboard());
@@ -250,26 +183,19 @@ public class BallGoalBotApplication {
         return photo;
     }
 
-    @Bean
-    @Scope("prototype")
-    public SendMessage tryAgainMessage() {
-        SendMessage message = new SendMessage();
-        message.setReplyMarkup(removeKeyboard());
-        message.setText("try again");
-        return message;
-    }
-
-    // <-----------Flows---------------->
+    // <-----------Cache flows---------------->
 
     @Bean
-    public IntegrationFlow zenitCacheFlow() {
+    public IntegrationFlow zenitFlow(
+            @Qualifier(value = "zenitCachePollerSpec") PollerSpec zenitCachePollerSpec,
+            TriggerHandler zenitTriggerHandler) {
         return IntegrationFlows
-                .from(zenitExecutorChannel())
+                .from(Object::new, spec -> spec.poller(zenitCachePollerSpec))
                 .transform(fetchFreshZenitFixture())
                 .publishSubscribeChannel(Executors.newCachedThreadPool(), subFlow -> subFlow
                         .subscribe(flow -> flow
                                 .transform(zenitTimestampTransformer())
-                                .handle(zenitTimestampHandler()))
+                                .handle(zenitTriggerHandler))
                         .subscribe(flow -> flow
                                 .transform(zenitCacheTransformer())
                                 .handle(zenitCacheHandler())))
@@ -277,14 +203,16 @@ public class BallGoalBotApplication {
     }
 
     @Bean
-    public IntegrationFlow leagueCacheFlow() {
+    public IntegrationFlow leagueFlow(
+            @Qualifier(value = "leagueCachePollerSpec") PollerSpec leagueCachePollerSpec,
+            TriggerHandler leagueTriggerHandler) {
         return IntegrationFlows
-                .from(leagueExecutorChannel())
+                .from(Object::new, spec -> spec.poller(leagueCachePollerSpec))
                 .publishSubscribeChannel(Executors.newCachedThreadPool(), subFlow -> subFlow
                         .subscribe(flow -> flow
                                 .transform(fetchLastMatchDayFixture())
                                 .transform(leagueTimestampTransformer())
-                                .handle(leagueTimestampHandler()))
+                                .handle(leagueTriggerHandler))
                         .subscribe(flow -> flow
                                 .transform(fetchFreshTable())
                                 .transform(leagueCacheTransformer())
@@ -292,16 +220,38 @@ public class BallGoalBotApplication {
                 .get();
     }
 
-    // <-----------Channels---------------->
+    // <-----------Triggers---------------->
+
+    /**
+     * Trigger for refreshing zenit fixture cache
+     *
+     * @return DynamicPeriodicTrigger bean with some long delay (will be overridden after new cache is fetched)
+     */
+    @Bean
+    public DynamicPeriodicTrigger zenitCacheTrigger() {
+        return new DynamicPeriodicTrigger(Duration.of(365, ChronoUnit.DAYS));
+    }
+
+    /**
+     * Trigger for refreshing league standing cache
+     *
+     * @return DynamicPeriodicTrigger bean with some long delay (will be overridden after new cache is fetched)
+     */
+    @Bean
+    public DynamicPeriodicTrigger leagueCacheTrigger() {
+        return new DynamicPeriodicTrigger(Duration.of(365, ChronoUnit.DAYS));
+    }
+
+    // <-----------Pollers specs---------------->
 
     @Bean
-    public MessageChannel zenitExecutorChannel() {
-        return new ExecutorChannel(Executors.newSingleThreadExecutor());
+    public PollerSpec zenitCachePollerSpec(DynamicPeriodicTrigger zenitCacheTrigger) {
+        return Pollers.trigger(zenitCacheTrigger);
     }
 
     @Bean
-    public MessageChannel leagueExecutorChannel() {
-        return new ExecutorChannel(Executors.newSingleThreadExecutor());
+    public PollerSpec leagueCachePollerSpec(DynamicPeriodicTrigger leagueCacheTrigger) {
+        return Pollers.trigger(leagueCacheTrigger);
     }
 
     // <-----------Transformers---------------->
@@ -344,18 +294,13 @@ public class BallGoalBotApplication {
     // <-----------Handlers---------------->
 
     @Bean
-    public TimestampHandler zenitTimestampHandler() {
-        return new TimestampHandler(zenitTimestamp());
-    }
-
-    @Bean
     public CacheHandler<ZenitTimeCache> zenitCacheHandler() {
         return new CacheHandler<>(zenitCache());
     }
 
     @Bean
-    public TimestampHandler leagueTimestampHandler() {
-        return new TimestampHandler(leagueTimestamp());
+    public TriggerHandler zenitTriggerHandler(DynamicPeriodicTrigger zenitCacheTrigger) {
+        return new TriggerHandler(zenitCacheTrigger, "zenit");
     }
 
     @Bean
@@ -363,13 +308,12 @@ public class BallGoalBotApplication {
         return new CacheHandler<>(leagueCache());
     }
 
+    @Bean
+    public TriggerHandler leagueTriggerHandler(DynamicPeriodicTrigger leagueCacheTrigger) {
+        return new TriggerHandler(leagueCacheTrigger, "league");
+    }
 
     // <-----------Cache---------------->
-
-    @Bean
-    public Timestamp zenitTimestamp() {
-        return new Timestamp();
-    }
 
     @Bean
     public Cache<ZenitTimeCache> zenitCache() {
@@ -377,27 +321,8 @@ public class BallGoalBotApplication {
     }
 
     @Bean
-    public Timestamp leagueTimestamp() {
-        return new Timestamp();
-    }
-
-    @Bean
     public Cache<String> leagueCache() {
         return new Cache<>();
-    }
-
-    // <-----------Cache updaters---------------->
-
-    @Bean
-    public CacheUpdater zenitCacheUpdater() {
-        return new CacheUpdater((CacheGateway) Objects.requireNonNull(zenitCacheGateway().getObject()),
-                zenitTimestamp());
-    }
-
-    @Bean
-    public LeagueCacheUpdater leagueCacheUpdater() {
-        return new LeagueCacheUpdater((CacheGateway) Objects.requireNonNull(leagueCacheGateway().getObject()),
-                leagueTimestamp(), leagueCache());
     }
 
     // <-----------Keyboards---------------->
@@ -410,8 +335,8 @@ public class BallGoalBotApplication {
         timezoneKeyboard.setSelective(true);
         timezoneKeyboard.setResizeKeyboard(true);
         KeyboardRow keyboardRow = new KeyboardRow();
-        keyboardRow.add(new KeyboardButton(commandZenitJerusalem));
-        keyboardRow.add(new KeyboardButton(commandZenitSaintPetersburg));
+        keyboardRow.add(new KeyboardButton(Commands.ZENIT_JERUSALEM));
+        keyboardRow.add(new KeyboardButton(Commands.ZENIT_SAINT_PETERSBURG));
         timezoneKeyboard.setKeyboard(Collections.singletonList(keyboardRow));
         return timezoneKeyboard;
     }
@@ -431,7 +356,7 @@ public class BallGoalBotApplication {
 
     @Bean
     public ApiRequest apiRequestImage() {
-        return new ApiRequestImage(env, imageResource);
+        return new ApiRequestImage(env);
     }
 
     // <-----------Other---------------->

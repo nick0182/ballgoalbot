@@ -21,8 +21,6 @@ public class Fixture {
 
     private Team awayTeam;
 
-    private String round;
-
     private int elapsed;
 
     public int getGoalsHomeTeam() {
@@ -47,10 +45,6 @@ public class Fixture {
 
     public String getStatus() {
         return status;
-    }
-
-    public String getRound() {
-        return round;
     }
 
     public int getElapsed() {

@@ -18,12 +18,8 @@ public class ZenitFixtureTransformer extends ApiTransformer<Fixture> {
     }
 
     @Override
-    public Fixture transform(Object payload) {
-        try {
-            return fetchZenitFixtureInPlay().orElse(fetchNextZenitFixture());
-        } catch (IOException e) {
-            throw wrapToRuntime(e);
-        }
+    public Fixture transform() throws IOException {
+        return fetchZenitFixtureInPlay().orElse(fetchNextZenitFixture());
     }
 
     private Optional<Fixture> fetchZenitFixtureInPlay() throws IOException {

@@ -10,12 +10,10 @@ import org.springframework.core.env.Environment;
 import java.io.IOException;
 import java.util.Objects;
 
-public class ApiRequestFixture implements ApiRequest {
-
-    private final Environment env;
+public class ApiRequestFixture extends ApiRequest {
 
     public ApiRequestFixture(Environment env) {
-        this.env = env;
+        super(env);
     }
 
     @Override
@@ -36,11 +34,6 @@ public class ApiRequestFixture implements ApiRequest {
                 .addHeader("x-rapidapi-key", key)
                 .build();
         Response response = okHttpClient.newCall(request).execute();
-        int statusCode = response.code();
-        if (statusCode == 200) {
-            return Objects.requireNonNull(response.body()).string();
-        } else {
-            throw new IllegalArgumentException("resource not found");
-        }
+        return Objects.requireNonNull(response.body()).string();
     }
 }

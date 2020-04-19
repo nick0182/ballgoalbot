@@ -8,15 +8,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Objects;
 
-public class ApiRequestImage implements ApiRequest {
+public class ApiRequestImage extends ApiRequest {
 
-    private final Environment env;
-
-    private final String imageResource;
-
-    public ApiRequestImage(Environment env, String imageResource) {
-        this.env = env;
-        this.imageResource = imageResource;
+    public ApiRequestImage(Environment env) {
+        super(env);
     }
 
     @Override
@@ -24,6 +19,7 @@ public class ApiRequestImage implements ApiRequest {
         String host = Objects.requireNonNull(env.getProperty("API_IMAGE_HOST"));
         String user = Objects.requireNonNull(env.getProperty("API_IMAGE_USER"));
         String key = Objects.requireNonNull(env.getProperty("API_IMAGE_KEY"));
+        String image = Objects.requireNonNull(env.getProperty("api.image.resource"));
 
         OkHttpClient client = new OkHttpClient();
         URL url = new URL("https", host, resource);
@@ -31,7 +27,7 @@ public class ApiRequestImage implements ApiRequest {
         RequestBody body = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("html", "<h1>table_image</>")
-                .addFormDataPart("url", imageResource)
+                .addFormDataPart("url", image)
                 .build();
         Request request = new Request.Builder()
                 .url(url)
@@ -40,11 +36,6 @@ public class ApiRequestImage implements ApiRequest {
                 .addHeader("Authorization", credential)
                 .build();
         Response response = client.newCall(request).execute();
-        int statusCode = response.code();
-        if (statusCode == 200) {
-            return Objects.requireNonNull(response.body()).string();
-        } else {
-            throw new IllegalArgumentException("resource not found");
-        }
+        return Objects.requireNonNull(response.body()).string();
     }
 }

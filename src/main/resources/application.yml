@@ -67,14 +67,6 @@ text:
     /zenit - info about FC Zenit next match. It shows who plays home and away, status and time. If a match is in play, it shows current score and minute (updated every 2 minutes)
     /standing - Russian premier league table. Updated after the last game of every match-day (i.e if there are 3 games this day, the table will be refreshed after the last game will be finished)
 
-command:
-  info: "/info"
-  zenit: "/zenit"
-  timezone:
-    jerusalem: "GMT +3.00 (Jerusalem)"
-    saintPetersburg: "GMT +3.00 (Saint-Petersburg)"
-  league: "/standing"
-
 ---
 
 spring:
@@ -82,7 +74,7 @@ spring:
 
 resource:
   teamId: 751 # FC Slavia Mozyr
-  leagueId: 511 # Belarus Vysshaya Liga 20
+  leagueId: 1383 # Belarus Vysshaya Liga 20
 
 api:
   image:

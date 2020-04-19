@@ -84,23 +84,4 @@ public class ZenitCacheTransformer implements GenericTransformer<Fixture, ZenitT
                 ":" +
                 fixture.getGoalsAwayTeam();
     }
-
-//    private String textWithDateTime(Fixture fixture, ZoneOffset zoneOffset) {
-//        OffsetDateTime eventDateTime =
-//                fixture.getEventDate().atOffset(ZoneOffset.UTC).withOffsetSameInstant(zoneOffset);
-//        String formattedDate = eventDateTime.format(Formatters.DATE_FORMATTER);
-//        String formattedTime = eventDateTime.format(Formatters.TIME_FORMATTER);
-//
-//        return commonText(fixture)
-//                .append(Emojis.EMOJI_DATE)
-//                .append(" ")
-//                .append(formattedDate)
-//                .append("\n")
-//                .append(Emojis.EMOJI_TIME)
-//                .append(" ")
-//                .append(formattedTime)
-//                .toString();
-//    }
-
-
 }

@@ -4,6 +4,7 @@ import com.nikolay.bot.ballgoal.constants.Status;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.transformer.timestamp.TimestampTransformer;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -13,7 +14,7 @@ public class ZenitTimestampTransformer implements TimestampTransformer {
     @Override
     public LocalDateTime transform(Fixture fixture) {
         LocalDateTime eventDate = fixture.getEventDate();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         String status = fixture.getStatus();
         switch (status) {
             case Status.NOT_STARTED:

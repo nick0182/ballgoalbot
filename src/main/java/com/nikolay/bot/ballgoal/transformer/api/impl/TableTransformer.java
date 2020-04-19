@@ -16,11 +16,7 @@ public class TableTransformer extends ApiTransformer<ResultTable> {
     }
 
     @Override
-    public ResultTable transform(Object source) {
-        try {
-            return callApi(resourceProperties.getResourceHtmlToImage(), ResultTable.class);
-        } catch (IOException e) {
-            throw wrapToRuntime(e);
-        }
+    protected ResultTable transform() throws IOException {
+        return callApi(resourceProperties.getResourceHtmlToImage(), ResultTable.class);
     }
 }

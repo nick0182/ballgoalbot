@@ -1,10 +1,16 @@
 package com.nikolay.bot.ballgoal.api;
 
+import org.springframework.core.env.Environment;
+
 import java.io.IOException;
-import java.time.ZoneId;
 
-public interface ApiRequest {
+public abstract class ApiRequest {
 
-    String call(String resource) throws IOException;
+    protected Environment env;
 
+    public ApiRequest(Environment env) {
+        this.env = env;
+    }
+
+    public abstract String call(String resource) throws IOException;
 }
