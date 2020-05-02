@@ -2,38 +2,36 @@ package com.nikolay.bot.ballgoal.transformer.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
-import com.nikolay.bot.ballgoal.properties.ResourceProperties;
+import com.nikolay.bot.ballgoal.json.fixture.Fixture;
+import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.transformer.GenericTransformer;
 
 import java.io.IOException;
 
-public abstract class ApiTransformer<T> implements GenericTransformer<Object, T> {
-
-    protected final ResourceProperties resourceProperties;
+@RequiredArgsConstructor
+@Slf4j
+public abstract class ApiTransformer implements GenericTransformer<Object, Fixture> {
 
     protected final ApiRequest apiRequest;
 
     protected final ObjectMapper objectMapper;
 
-    public ApiTransformer(ResourceProperties resourceProperties, ApiRequest apiRequest, ObjectMapper objectMapper) {
-        this.resourceProperties = resourceProperties;
-        this.apiRequest = apiRequest;
-        this.objectMapper = objectMapper;
-    }
-
     @Override
-    public T transform(Object source) {
+    public Fixture transform(Object source) {
         try {
             return transform();
         } catch (IOException e) {
-            throw new RuntimeException("error fetching result from api. Cache was not set");
+            log.error("error fetching result from api", e);
+            throw new RuntimeException("Cache was not set");
         }
     }
 
-    protected abstract T transform() throws IOException;
+    protected abstract Fixture transform() throws IOException;
 
-    protected <S> S callApi(String resource, Class<S> classToMap) throws IOException {
+    protected ResultFixture callApi(String resource) throws IOException {
         String json = apiRequest.call(resource);
-        return objectMapper.readValue(json, classToMap);
+        return objectMapper.readValue(json, ResultFixture.class);
     }
 }

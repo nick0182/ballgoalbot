@@ -11,3 +11,9 @@ target/
 
 ### Run config ###
 .run
+
+### Logs ###
+log
+
+### AWS ###
+aws

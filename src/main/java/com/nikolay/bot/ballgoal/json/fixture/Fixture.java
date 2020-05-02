@@ -1,9 +1,15 @@
 package com.nikolay.bot.ballgoal.json.fixture;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.nikolay.bot.ballgoal.json.deserializer.LocalDateTimeDeserializer;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
+@Getter
+@Setter
+@ToString
+@EqualsAndHashCode
 public class Fixture {
 
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
@@ -22,33 +28,4 @@ public class Fixture {
     private Team awayTeam;
 
     private int elapsed;
-
-    public int getGoalsHomeTeam() {
-        return goalsHomeTeam;
-    }
-
-    public int getGoalsAwayTeam() {
-        return goalsAwayTeam;
-    }
-
-    public Team getHomeTeam() {
-        return homeTeam;
-    }
-
-    public Team getAwayTeam() {
-        return awayTeam;
-    }
-
-    public LocalDateTime getEventDate() {
-        return event_date;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public int getElapsed() {
-        return elapsed;
-    }
-
 }

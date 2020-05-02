@@ -6,7 +6,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-class TimeStringConverterTest extends Specification {
+class TimeStringConverterSpec extends Specification {
 
 //    def "get date string"() {
 //        given: "ISO offset formatted zoned date-time"

@@ -5,7 +5,7 @@ import spock.lang.Specification
 import java.time.DateTimeException
 import java.time.ZoneId
 
-class ZoneGetterTest extends Specification {
+class ZoneGetterSpec extends Specification {
 
 //    def "should throw exception when invalid resource"() {
 //        given: "invalid resource"

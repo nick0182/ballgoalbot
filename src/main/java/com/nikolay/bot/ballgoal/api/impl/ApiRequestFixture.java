@@ -1,20 +1,19 @@
 package com.nikolay.bot.ballgoal.api.impl;
 
 import com.nikolay.bot.ballgoal.api.ApiRequest;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.*;
 import org.springframework.core.env.Environment;
 
 import java.io.IOException;
 import java.util.Objects;
 
-public class ApiRequestFixture extends ApiRequest {
+@Slf4j
+@RequiredArgsConstructor
+public class ApiRequestFixture implements ApiRequest {
 
-    public ApiRequestFixture(Environment env) {
-        super(env);
-    }
+    private final Environment env;
 
     @Override
     public String call(String resource) throws IOException {
@@ -33,7 +32,9 @@ public class ApiRequestFixture extends ApiRequest {
                 .addHeader("x-rapidapi-host", host)
                 .addHeader("x-rapidapi-key", key)
                 .build();
-        Response response = okHttpClient.newCall(request).execute();
-        return Objects.requireNonNull(response.body()).string();
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            log.debug("Api fixture response code: {}", response.code());
+            return Objects.requireNonNull(response.body()).string();
+        }
     }
 }

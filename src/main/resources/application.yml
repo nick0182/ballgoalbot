@@ -3,15 +3,15 @@ offset:
   jerusalem: "+03:00"
 
 resource:
-  teamId: 596 # FC Zenit
-  leagueId: 511 # Russian Premiere League 19/20
-  apiResourceNextFixture: "/v2/fixtures/team/${resource.teamId}/next/1"
-  apiResourceFixture: "/v2/fixtures/id/"
-  apiResourceNextLeagueFixture: "/v2/fixtures/league/${resource.leagueId}/next/1"
-  apiResourceLeagueRoundDates: "/v2/fixtures/league/${resource.leagueId}/"
-  apiResourceFixturesInPlay: "/v2/fixtures/live"
-  apiResourceLeagueFixturesInPlay: "/v2/fixtures/live/${resource.leagueId}"
-  resourceHtmlToImage: "/v1/image"
+  zenit:
+    apiResourceNextFixture: "/v2/fixtures/team/${resource.zenit.teamId}/next/1"
+    apiResourceFixturesInPlay: "/v2/fixtures/live"
+    teamId: 596 # FC Zenit
+  league:
+    apiResourceNextLeagueFixture: "/v2/fixtures/league/${resource.league.leagueId}/next/1"
+    apiResourceLeagueRoundDates: "/v2/fixtures/league/${resource.league.leagueId}/"
+    apiResourceLeagueFixturesInPlay: "/v2/fixtures/live/${resource.league.leagueId}"
+    leagueId: 511 # Russian Premiere League 19/20
 
 api:
   image:
@@ -70,25 +70,23 @@ text:
 ---
 
 spring:
-  profiles: by
+  profiles: germany
 
 resource:
-  teamId: 751 # FC Slavia Mozyr
-  leagueId: 1383 # Belarus Vysshaya Liga 20
+  zenit:
+    teamId: 157 # FC Bayern Munich
+  league:
+    leagueId: 754 # Germany Bundesliga 1
 
 api:
   image:
     resource:
-      "https://www.fctables.com/\
-      belarus/\
-      premier-division/\
-      iframe/\
-      ?type=table\
+      "https://www.fctables.com/germany/1-bundesliga/iframe/?type=table\
       &lang_id=2\
-      &country=20\
-      &template=178\
-      &team=194166\
-      &timezone=Asia/Jerusalem\
+      &country=83\
+      &template=16\
+      &team=181104\
+      &timezone=Europe/London\
       &time=24\
       &po=1\
       &ma=1\
@@ -121,11 +119,21 @@ api:
       &sh=1\
       &hfb=1\
       &hbc=3bafda\
-      &hfc=FFFFFF\
-      &timezone=Europe/London"
+      &hfc=FFFFFF"
 
 text:
   info: |
     /info - see all available commands
-    /zenit - info about FC Slavia Mozyr next match. It shows who plays home and away, status and time. If a match is in play, it shows current score and minute (updated every 2 minutes)
-    /standing - Belarus Vysshaya Liga table. Updated after the last game of every match-day (i.e if there are 3 games this day, the table will be refreshed after the last game will be finished)
+    /zenit - info about FC Bayern Munich next match. It shows who plays home and away, status and time. If a match is in play, it shows current score and minute (updated every 2 minutes)
+    /standing - Germany Bundesliga 1 table. Updated after the last game of every match-day (i.e if there are 3 games this day, the table will be refreshed after the last game will be finished)
+
+---
+
+spring:
+  profiles: debug
+
+logging:
+  file:
+    name: "log/log.txt"
+  level:
+    com.nikolay.bot.ballgoal: DEBUG

@@ -13,7 +13,7 @@ public class ZenitTimestampTransformer implements TimestampTransformer {
 
     @Override
     public LocalDateTime transform(Fixture fixture) {
-        LocalDateTime eventDate = fixture.getEventDate();
+        LocalDateTime eventDate = fixture.getEvent_date();
         LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         String status = fixture.getStatus();
         switch (status) {
@@ -52,7 +52,7 @@ public class ZenitTimestampTransformer implements TimestampTransformer {
         } else if (period.getDays() > 1) {
             return now.plusHours(3);
         } else {
-            Duration duration = Duration.between(now.toLocalTime(), eventDate.toLocalTime());
+            Duration duration = Duration.between(now, eventDate);
             if (duration.getSeconds() > 7200) {
                 return now.plusMinutes(30);
             } else {

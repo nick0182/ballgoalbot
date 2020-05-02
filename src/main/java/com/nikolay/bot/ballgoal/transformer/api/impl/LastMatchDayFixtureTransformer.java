@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
-import com.nikolay.bot.ballgoal.properties.ResourceProperties;
 import com.nikolay.bot.ballgoal.transformer.api.ApiTransformer;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -13,21 +13,36 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
-public class LastMatchDayFixtureTransformer extends ApiTransformer<Fixture> {
+@Slf4j
+public class LastMatchDayFixtureTransformer extends ApiTransformer {
 
-    public LastMatchDayFixtureTransformer(ResourceProperties resourceProperties,
-                                          ApiRequest apiRequest, ObjectMapper objectMapper) {
-        super(resourceProperties, apiRequest, objectMapper);
+    private final String apiResourceNextLeagueFixture;
+
+    private final String apiResourceLeagueRoundDates;
+
+    private final String apiResourceLeagueFixturesInPlay;
+
+    public LastMatchDayFixtureTransformer(ApiRequest apiRequest, ObjectMapper objectMapper,
+                                          String apiResourceNextLeagueFixture,
+                                          String apiResourceLeagueRoundDates,
+                                          String apiResourceLeagueFixturesInPlay) {
+        super(apiRequest, objectMapper);
+        this.apiResourceNextLeagueFixture = apiResourceNextLeagueFixture;
+        this.apiResourceLeagueRoundDates = apiResourceLeagueRoundDates;
+        this.apiResourceLeagueFixturesInPlay = apiResourceLeagueFixturesInPlay;
     }
 
     @Override
     protected Fixture transform() throws IOException {
         Fixture matchDayFixture = fetchLeagueFixtureInPlay().orElse(fetchNextLeagueFixture());
-        return fetchLastMatchDayFixture(matchDayFixture.getEventDate());
+        log.debug("Fetched league match day fixture: {}", matchDayFixture);
+        Fixture lastMatchDayFixture = fetchLastMatchDayFixture(matchDayFixture.getEvent_date());
+        log.debug("Fetched league last match day fixture: {}", lastMatchDayFixture);
+        return lastMatchDayFixture;
     }
 
     private Optional<Fixture> fetchLeagueFixtureInPlay() throws IOException {
-        ResultFixture result = callApi(resourceProperties.getApiResourceLeagueFixturesInPlay(), ResultFixture.class);
+        ResultFixture result = callApi(apiResourceLeagueFixturesInPlay);
         List<Fixture> allLeagueFixturesInPlay = result.getApi().getFixtures();
         return allLeagueFixturesInPlay.isEmpty()
                 ? Optional.empty()
@@ -35,13 +50,13 @@ public class LastMatchDayFixtureTransformer extends ApiTransformer<Fixture> {
     }
 
     private Fixture fetchNextLeagueFixture() throws IOException {
-        ResultFixture result = callApi(resourceProperties.getApiResourceNextLeagueFixture(), ResultFixture.class);
+        ResultFixture result = callApi(apiResourceNextLeagueFixture);
         return result.getApi().getFixtures().get(0);
     }
 
     private Fixture fetchLastMatchDayFixture(LocalDateTime eventDate) throws IOException {
-        String resource = appendDate(resourceProperties.getApiResourceLeagueRoundDates(), eventDate);
-        ResultFixture resultFixture = callApi(resource, ResultFixture.class);
+        String resource = appendDate(apiResourceLeagueRoundDates, eventDate);
+        ResultFixture resultFixture = callApi(resource);
         List<Fixture> matchDayFixtures = resultFixture.getApi().getFixtures();
         // get last fixture from the list as it's already sorted by date
         return matchDayFixtures.get(matchDayFixtures.size() - 1);

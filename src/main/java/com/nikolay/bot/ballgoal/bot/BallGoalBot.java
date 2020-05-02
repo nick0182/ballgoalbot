@@ -1,29 +1,28 @@
 package com.nikolay.bot.ballgoal.bot;
 
-import com.nikolay.bot.ballgoal.cache.Cache;
 import com.nikolay.bot.ballgoal.constants.Commands;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Objects;
 
+@RequiredArgsConstructor
+@Slf4j
 public abstract class BallGoalBot extends TelegramLongPollingBot {
 
     private final Environment env;
 
-    private final Cache<String> leagueCache;
+    private final SendMessage infoMessage;
 
-    public BallGoalBot(Environment env, Cache<String> leagueCache) {
-        this.env = env;
-        this.leagueCache = leagueCache;
-    }
+    private final SendMessage zenitMessage;
 
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
@@ -32,10 +31,10 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         try {
             switch (command) {
                 case Commands.INFO:
-                    executeResult(getInfoMessage(), chatId);
+                    executeResult(infoMessage, chatId);
                     break;
                 case Commands.ZENIT:
-                    executeResult(getZenitMessage(), chatId);
+                    executeResult(zenitMessage, chatId);
                     break;
                 case Commands.ZENIT_JERUSALEM:
                     executeResult(getJerusalemMessage(), chatId);
@@ -48,7 +47,7 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
                     break;
             }
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            log.error("Error executing telegram message: {}", e.getMessage());
         }
     }
 
@@ -57,21 +56,12 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
         execute(message);
     }
 
-    private void executeResult(SendPhoto photo, long chatId) throws TelegramApiException {
-        boolean isNewPhoto = isPhotoIdURL(photo.getPhoto().getAttachName());
-        photo.setChatId(chatId);
-        Message file = execute(photo);
-        if (isNewPhoto) {
-            leagueCache.setCache(file.getPhoto().get(0).getFileId());
-        }
-    }
-
-    private boolean isPhotoIdURL(String photoId) {
-        try {
-            new URL(photoId);
-            return true;
-        } catch (MalformedURLException e) {
-            return false;
+    private void executeResult(SendPhoto photoMessage, long chatId) throws TelegramApiException {
+        photoMessage.setChatId(chatId);
+        InputFile photoFile = photoMessage.getPhoto();
+        Message file = execute(photoMessage);
+        if (photoFile.isNew()) {
+            photoFile.setMedia(file.getPhoto().get(0).getFileId());
         }
     }
 
@@ -82,10 +72,6 @@ public abstract class BallGoalBot extends TelegramLongPollingBot {
     public String getBotToken() {
         return Objects.requireNonNull(env.getProperty("BOT_TOKEN"));
     }
-
-    protected abstract SendMessage getInfoMessage();
-
-    protected abstract SendMessage getZenitMessage();
 
     protected abstract SendMessage getJerusalemMessage();
 

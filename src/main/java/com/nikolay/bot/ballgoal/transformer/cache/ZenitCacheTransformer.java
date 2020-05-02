@@ -22,7 +22,7 @@ public class ZenitCacheTransformer implements GenericTransformer<Fixture, ZenitT
             case WALK_OVER:
                 return new ZenitTimeCache(null, textWithStatus(fixture));
             case NOT_STARTED:
-                return new ZenitTimeCache(fixture.getEventDate(), commonText(fixture));
+                return new ZenitTimeCache(fixture.getEvent_date(), commonText(fixture));
             case FIRST_HALF:
             case SECOND_HALF:
             case EXTRA_TIME:

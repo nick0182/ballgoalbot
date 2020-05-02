@@ -4,36 +4,47 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
 import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
-import com.nikolay.bot.ballgoal.properties.ResourceProperties;
 import com.nikolay.bot.ballgoal.transformer.api.ApiTransformer;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.Optional;
 
-public class ZenitFixtureTransformer extends ApiTransformer<Fixture> {
+@Slf4j
+public class ZenitFixtureTransformer extends ApiTransformer {
 
-    public ZenitFixtureTransformer(ResourceProperties resourceProperties,
-                                   ApiRequest apiRequest, ObjectMapper objectMapper) {
-        super(resourceProperties, apiRequest, objectMapper);
+    private final String apiResourceNextFixture;
+
+    private final String apiResourceFixturesInPlay;
+
+    private final int teamId;
+
+    public ZenitFixtureTransformer(ApiRequest apiRequest, ObjectMapper objectMapper,
+                                   String apiResourceNextFixture, String apiResourceFixturesInPlay, int teamId) {
+        super(apiRequest, objectMapper);
+        this.apiResourceNextFixture = apiResourceNextFixture;
+        this.apiResourceFixturesInPlay = apiResourceFixturesInPlay;
+        this.teamId = teamId;
     }
 
     @Override
     public Fixture transform() throws IOException {
-        return fetchZenitFixtureInPlay().orElse(fetchNextZenitFixture());
+        Fixture zenitFixture = fetchZenitFixtureInPlay().orElse(fetchNextZenitFixture());
+        log.debug("Fetched next Zenit fixture: {}", zenitFixture);
+        return zenitFixture;
     }
 
     private Optional<Fixture> fetchZenitFixtureInPlay() throws IOException {
-        ResultFixture result = callApi(resourceProperties.getApiResourceFixturesInPlay(), ResultFixture.class);
+        ResultFixture result = callApi(apiResourceFixturesInPlay);
         return result.getApi().getFixtures().stream().filter(this::isTeamPlayingNow).findAny();
     }
 
     private Fixture fetchNextZenitFixture() throws IOException {
-        ResultFixture result = callApi(resourceProperties.getApiResourceNextFixture(), ResultFixture.class);
+        ResultFixture result = callApi(apiResourceNextFixture);
         return result.getApi().getFixtures().get(0);
     }
 
     private boolean isTeamPlayingNow(Fixture fixture) {
-        int teamId = resourceProperties.getTeamId();
         int homeTeamId = fixture.getHomeTeam().getTeam_id();
         int awayTeamId = fixture.getAwayTeam().getTeam_id();
         return homeTeamId == teamId || awayTeamId == teamId;

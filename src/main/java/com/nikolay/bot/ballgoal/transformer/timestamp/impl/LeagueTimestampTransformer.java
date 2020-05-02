@@ -9,6 +9,6 @@ public class LeagueTimestampTransformer implements TimestampTransformer {
 
     @Override
     public LocalDateTime transform(Fixture fixture) {
-        return fixture.getEventDate().plusMinutes(130);
+        return fixture.getEvent_date().plusMinutes(130);
     }
 }
