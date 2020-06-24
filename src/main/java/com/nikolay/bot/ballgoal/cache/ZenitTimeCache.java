@@ -9,5 +9,5 @@ public final class ZenitTimeCache {
 
     private final LocalDateTime dateTime;
 
-    private final String cache;
+    private final String text;
 }

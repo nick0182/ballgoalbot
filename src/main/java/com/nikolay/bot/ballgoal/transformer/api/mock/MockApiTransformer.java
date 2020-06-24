@@ -8,10 +8,10 @@ import org.springframework.integration.transformer.GenericTransformer;
 import java.time.Clock;
 import java.time.LocalDateTime;
 
-public class MockApiTransformer implements GenericTransformer<Object, Fixture> {
+public class MockApiTransformer<T> implements GenericTransformer<T, Fixture> {
 
     @Override
-    public Fixture transform(Object source) {
+    public Fixture transform(T source) {
         Team homeTeam = new Team();
         homeTeam.setTeam_name("Barcelona");
         Team awayTeam = new Team();

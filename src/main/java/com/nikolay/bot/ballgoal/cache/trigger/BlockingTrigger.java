@@ -1,8 +1,9 @@
 package com.nikolay.bot.ballgoal.cache.trigger;
 
+import com.nikolay.bot.ballgoal.cache.Cache;
+import com.nikolay.bot.ballgoal.cache.trigger.barrier.Barrier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHandler;
 import org.springframework.scheduling.Trigger;
 import org.springframework.scheduling.TriggerContext;
 
@@ -10,25 +11,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Date;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 @Slf4j
-public class BlockingTrigger implements Trigger, MessageHandler {
+@RequiredArgsConstructor
+public class BlockingTrigger implements Trigger {
 
-    private final CyclicBarrier barrier = new CyclicBarrier(2);
+    private final Barrier barrier;
 
-    private volatile Duration duration = Duration.ofMillis(0);
-
-    @Override
-    public void handleMessage(Message<?> message) {
-        this.duration = (Duration) message.getPayload();
-        log.debug("duration set barrier awaited. Duration is: {}", duration);
-        awaitBarrier();
-        resetBarrier();
-    }
+    private final Cache<Duration> cache;
 
     @Override
     public Date nextExecutionTime(TriggerContext triggerContext) {
@@ -36,23 +26,11 @@ public class BlockingTrigger implements Trigger, MessageHandler {
         if (lastScheduled == null) {
             return new Date();
         } else {
-            awaitBarrier();
-            Date nextExecutionTime = new Date(lastScheduled.getTime() + duration.toMillis());
+            barrier.awaitBarrier();
+            Date nextExecutionTime = new Date(lastScheduled.getTime() + cache.getCache().toMillis());
             log.debug("trigger next execution time barrier awaited. Time is: {}",
                     LocalDateTime.ofInstant(nextExecutionTime.toInstant(), ZoneOffset.UTC));
             return nextExecutionTime;
         }
-    }
-
-    private void awaitBarrier() {
-        try {
-            barrier.await(30, TimeUnit.SECONDS);
-        } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
-            log.error("Failed to await cyclic barrier due to exception: {0}", e.getCause());
-        }
-    }
-
-    private void resetBarrier() {
-        barrier.reset();
     }
 }

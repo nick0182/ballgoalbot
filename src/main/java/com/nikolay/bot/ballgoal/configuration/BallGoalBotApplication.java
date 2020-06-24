@@ -127,7 +127,7 @@ public class BallGoalBotApplication {
     private String getOffsetCacheText(ZoneOffset offset) {
         ZenitTimeCache zenitTimeCache = zenitCache().getCache();
         if (zenitTimeCache != null) {
-            String cache = zenitTimeCache.getCache();
+            String cache = zenitTimeCache.getText();
             LocalDateTime dateTime = zenitTimeCache.getDateTime();
             return cache + CacheOffsetAppender.appendOffset(dateTime, offset);
         } else {

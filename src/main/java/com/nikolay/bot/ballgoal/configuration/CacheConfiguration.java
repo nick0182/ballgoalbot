@@ -3,17 +3,25 @@ package com.nikolay.bot.ballgoal.configuration;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikolay.bot.ballgoal.api.ApiRequest;
+import com.nikolay.bot.ballgoal.api.ApiResolver;
 import com.nikolay.bot.ballgoal.api.impl.ApiRequestFixture;
+import com.nikolay.bot.ballgoal.api.impl.FixtureApiResolver;
 import com.nikolay.bot.ballgoal.cache.Cache;
 import com.nikolay.bot.ballgoal.cache.CacheHandler;
+import com.nikolay.bot.ballgoal.cache.TriggerCacheHandler;
 import com.nikolay.bot.ballgoal.cache.ZenitTimeCache;
 import com.nikolay.bot.ballgoal.cache.trigger.BlockingTrigger;
 import com.nikolay.bot.ballgoal.cache.trigger.TriggerDurationTransformer;
+import com.nikolay.bot.ballgoal.cache.trigger.barrier.Barrier;
+import com.nikolay.bot.ballgoal.cache.trigger.barrier.impl.TriggerBarrier;
+import com.nikolay.bot.ballgoal.cache.utils.ZenitPairCache;
 import com.nikolay.bot.ballgoal.json.fixture.Fixture;
+import com.nikolay.bot.ballgoal.json.fixture.ResultFixture;
 import com.nikolay.bot.ballgoal.transformer.api.impl.LastMatchDayFixtureTransformer;
 import com.nikolay.bot.ballgoal.transformer.api.impl.TableTransformer;
 import com.nikolay.bot.ballgoal.transformer.api.impl.ZenitFixtureTransformer;
 import com.nikolay.bot.ballgoal.transformer.cache.ZenitCacheTransformer;
+import com.nikolay.bot.ballgoal.transformer.cache.ZenitInPlayTransformer;
 import com.nikolay.bot.ballgoal.transformer.timestamp.TimestampTransformer;
 import com.nikolay.bot.ballgoal.transformer.timestamp.impl.LeagueTimestampTransformer;
 import com.nikolay.bot.ballgoal.transformer.timestamp.impl.ZenitTimestampTransformer;
@@ -34,8 +42,10 @@ import org.telegram.telegrambots.meta.api.objects.InputFile;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 @Configuration
 public class CacheConfiguration {
@@ -68,18 +78,24 @@ public class CacheConfiguration {
 
     @Bean
     public IntegrationFlow zenitFlow(
+            Supplier<ZenitPairCache> zenitFlowSupplier,
             @Qualifier(value = "zenitCachePollerSpec") PollerSpec zenitCachePollerSpec,
-            GenericTransformer<Object, Fixture> fetchFreshZenitFixture,
+            GenericTransformer<ZenitPairCache, Fixture> fetchFreshZenitFixture,
+            GenericTransformer<Fixture, Boolean> zenitInPlayTransformer,
+            MessageHandler zenitInPlayHandler,
             TimestampTransformer zenitTimestampTransformer,
             GenericTransformer<LocalDateTime, Duration> zenitTriggerDurationTransformer,
             ExecutorService cachedExecutor,
-            @Qualifier(value = "zenitTriggerHandler") MessageHandler zenitTriggerHandler,
+            MessageHandler zenitTriggerHandler,
             GenericTransformer<Fixture, ZenitTimeCache> zenitCacheTransformer,
             CacheHandler<ZenitTimeCache> zenitCacheHandler) {
         return IntegrationFlows
-                .from(Object::new, spec -> spec.poller(zenitCachePollerSpec))
+                .from(zenitFlowSupplier, spec -> spec.poller(zenitCachePollerSpec))
                 .transform(fetchFreshZenitFixture)
                 .publishSubscribeChannel(cachedExecutor, subFlow -> subFlow
+                        .subscribe(flow -> flow
+                                .transform(zenitInPlayTransformer)
+                                .handle(zenitInPlayHandler))
                         .subscribe(flow -> flow
                                 .transform(zenitTimestampTransformer)
                                 .transform(zenitTriggerDurationTransformer)
@@ -92,16 +108,17 @@ public class CacheConfiguration {
 
     @Bean
     public IntegrationFlow leagueFlow(
+            Supplier<Object> leagueFlowSupplier,
             @Qualifier(value = "leagueCachePollerSpec") PollerSpec leagueCachePollerSpec,
             GenericTransformer<Object, Fixture> fetchLastMatchDayFixture,
             TimestampTransformer leagueTimestampTransformer,
             GenericTransformer<LocalDateTime, Duration> leagueTriggerDurationTransformer,
             ExecutorService cachedExecutor,
-            @Qualifier(value = "leagueTriggerHandler") MessageHandler leagueTriggerHandler,
+            MessageHandler leagueTriggerHandler,
             GenericTransformer<Object, InputFile> tableTransformer,
             CacheHandler<InputFile> leagueCacheHandler) {
         return IntegrationFlows
-                .from(Object::new, spec -> spec.poller(leagueCachePollerSpec))
+                .from(leagueFlowSupplier, spec -> spec.poller(leagueCachePollerSpec))
                 .publishSubscribeChannel(cachedExecutor, subFlow -> subFlow
                         .subscribe(flow -> flow
                                 .transform(fetchLastMatchDayFixture)
@@ -117,13 +134,13 @@ public class CacheConfiguration {
     // <-----------Triggers---------------->
 
     @Bean
-    public Trigger zenitTrigger() {
-        return new BlockingTrigger();
+    public Trigger zenitTrigger(Barrier zenitBarrier, Cache<Duration> zenitTriggerCache) {
+        return new BlockingTrigger(zenitBarrier, zenitTriggerCache);
     }
 
     @Bean
-    public Trigger leagueTrigger() {
-        return new BlockingTrigger();
+    public Trigger leagueTrigger(Barrier leagueBarrier, Cache<Duration> leagueTriggerCache) {
+        return new BlockingTrigger(leagueBarrier, leagueTriggerCache);
     }
 
     // <-----------Pollers specs---------------->
@@ -149,10 +166,9 @@ public class CacheConfiguration {
 
     @Bean
     @Profile(value = "!manual-test")
-    public GenericTransformer<Object, Fixture> fetchFreshZenitFixture(ApiRequest apiRequestFixture,
-                                                                      ObjectMapper objectMapper) {
-        return new ZenitFixtureTransformer(apiRequestFixture, objectMapper,
-                apiResourceNextFixture, apiResourceFixturesInPlay, teamId);
+    public GenericTransformer<ZenitPairCache, Fixture> fetchFreshZenitFixture(
+            ApiResolver<ResultFixture> apiResolver) {
+        return new ZenitFixtureTransformer(apiResolver, apiResourceNextFixture, apiResourceFixturesInPlay, teamId);
     }
 
     @Bean
@@ -167,10 +183,9 @@ public class CacheConfiguration {
 
     @Bean
     @Profile(value = "!manual-test")
-    public GenericTransformer<Object, Fixture> fetchLastMatchDayFixture(ApiRequest apiRequestFixture,
-                                                                        ObjectMapper objectMapper) {
-        return new LastMatchDayFixtureTransformer(apiRequestFixture, objectMapper,
-                apiResourceNextLeagueFixture, apiResourceLeagueRoundDates, apiResourceLeagueFixturesInPlay);
+    public GenericTransformer<Object, Fixture> fetchLastMatchDayFixture(ApiResolver<ResultFixture> apiResolver) {
+        return new LastMatchDayFixtureTransformer(apiResolver, apiResourceNextLeagueFixture,
+                apiResourceLeagueRoundDates, apiResourceLeagueFixturesInPlay);
     }
 
     @Bean
@@ -188,6 +203,16 @@ public class CacheConfiguration {
         return new TriggerDurationTransformer();
     }
 
+    @Bean
+    public GenericTransformer<Fixture, Boolean> zenitInPlayTransformer() {
+        return new ZenitInPlayTransformer();
+    }
+
+    @Bean
+    public GenericTransformer<Object, InputFile> fetchFreshTable() {
+        return new TableTransformer(env.getProperty("api.image.resource"));
+    }
+
     // <-----------Handlers---------------->
 
     @Bean
@@ -201,33 +226,80 @@ public class CacheConfiguration {
     }
 
     @Bean
-    public MessageHandler zenitTriggerHandler(Trigger zenitTrigger) {
-        return (MessageHandler) zenitTrigger;
+    public CacheHandler<Duration> zenitTriggerHandler(Cache<Duration> zenitTriggerCache, Barrier zenitBarrier) {
+        return new TriggerCacheHandler(zenitTriggerCache, zenitBarrier);
     }
 
     @Bean
-    public MessageHandler leagueTriggerHandler(Trigger leagueTrigger) {
-        return (MessageHandler) leagueTrigger;
+    public CacheHandler<Duration> leagueTriggerHandler(Cache<Duration> leagueTriggerCache, Barrier leagueBarrier) {
+        return new TriggerCacheHandler(leagueTriggerCache, leagueBarrier);
     }
 
     @Bean
-    public GenericTransformer<Object, InputFile> fetchFreshTable() {
-        return new TableTransformer(env.getProperty("api.image.resource"));
+    public CacheHandler<Boolean> zenitInPlayHandler(Cache<Boolean> zenitInPlayCache) {
+        return new CacheHandler<>(zenitInPlayCache);
     }
 
-    // <-----------Apis---------------->
+    // <-----------Cache---------------->
+
+    @Bean
+    public Cache<Duration> zenitTriggerCache() {
+        return new Cache<>();
+    }
+
+    @Bean
+    public Cache<Duration> leagueTriggerCache() {
+        return new Cache<>();
+    }
+
+    @Bean
+    public Cache<Boolean> zenitInPlayCache() {
+        return new Cache<>();
+    }
+
+    // <-----------Flow suppliers---------------->
+
+    @Bean
+    public Supplier<ZenitPairCache> zenitFlowSupplier(Cache<Boolean> zenitInPlayCache,
+                                                      Cache<Duration> zenitTriggerCache) {
+        boolean zenitInPlay = Optional.ofNullable(zenitInPlayCache.getCache()).orElse(false);
+        Duration zenitTrigger = Optional.ofNullable(zenitTriggerCache.getCache()).orElse(Duration.ofHours(1));
+        return () -> new ZenitPairCache(zenitInPlay, zenitTrigger);
+    }
+
+    @Bean
+    public Supplier<Object> leagueFlowSupplier() {
+        return Object::new;
+    }
+
+    // <-----------Barriers---------------->
+
+    @Bean
+    public Barrier zenitBarrier() {
+        return new TriggerBarrier();
+    }
+
+    @Bean
+    public Barrier leagueBarrier() {
+        return new TriggerBarrier();
+    }
+
+    // <-----------Api---------------->
 
     @Bean
     public ApiRequest apiRequestFixture(Environment env) {
         return new ApiRequestFixture(env);
     }
 
-    // <-----------Other---------------->
-
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper;
+    }
+
+    @Bean
+    public ApiResolver<ResultFixture> fixtureApiResolver(ApiRequest apiRequestFixture, ObjectMapper objectMapper) {
+        return new FixtureApiResolver(apiRequestFixture, objectMapper);
     }
 }
